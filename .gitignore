@@ -1,0 +1,75 @@
+# Large training data (too big for git; regenerate with grok_sweep.py)
+*.pt
+grok_sweep_results/
+grok_sweep_results_slow/
+
+# Keep result tensors in pca_sweep_plots/ via explicit include below
+!pca_sweep_plots/*.pt
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+
+# macOS
+.DS_Store
+._*
+
+# IDE
+.vscode/
+.idea/
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# Old/unrelated files
+bubble_exp.py
+bubble_exp_comm.py
+bubble_exp_subspace.py
+bubble_exp_autoencoder.py
+bubble_exp\ copy*.py
+bubble_exp\ comm\ copy.py
+attn-1-layer.py
+m_bubble/
+src/
+plots/
+pca_plots/
+marker_test/
+pca_plots.zip
+
+# Older grokking versions (not needed for paper)
+groking_v1.py
+groking_v2.py
+groking_v3.py
+groking_v3_nowd.py
+groking_mps_safe.py
+experiment_full.py
+helpers.py
+train.py
+analysis_subspace.py
+analysis_subspace2.py
+analysis_alignment.py
+
+# Large data
+single_run_full.pt
+grok_runs.pt
+grok_runs_nowd.pt
+runs.pt
+ckpt_*.pt
+
+# Logs (can be regenerated)
+*.csv
+sweep_log*.txt
+sweep_slow_log.txt
+
+# Early PCA script (superseded by pca_sweep_analysis.py)
+pca_attn_eigenanalysis.py
+
+# Other
+Figure_1_intrinsic_dimension.png
+bubble_circuit_transition.png
+
+# Claude metadata
+.claude/
