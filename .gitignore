@@ -63,6 +63,7 @@ ckpt_*.pt
 *.csv
 sweep_log*.txt
 sweep_slow_log.txt
+slow_regime_log.txt
 
 # Early PCA script (superseded by pca_sweep_analysis.py)
 pca_attn_eigenanalysis.py
