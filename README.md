@@ -45,6 +45,7 @@ All experiments use the canonical grokking setup from [Power et al. (2022)](http
 | 6 | `grok_converse_commutator.py` | Converse: project weight trajectory onto commutator subspace | figO--figR |
 | 7 | `grok_multiseed_commutator.py` | Multi-seed replication (3 seeds x 6 ops x 2 wd = 36 runs) | figS--figV |
 | 8 | `grok_generalization_dynamics.py` | Temporal: defect spike vs generalization transition timing | figW, figW2, figX |
+| 9 | `grok_slow_regime_commutator.py` | Slow regime (lr=5e-5, wd=0.1, 3L): integrability + defect timing | figY, figZ |
 
 ### Supporting Scripts
 
@@ -55,7 +56,7 @@ All experiments use the canonical grokking setup from [Power et al. (2022)](http
 
 ### Output
 
-- `pca_sweep_plots/` -- All publication figures (figA through figX) and saved result tensors
+- `pca_sweep_plots/` -- All publication figures (figA through figZ) and saved result tensors
 - `grok_sweep_results/` -- Raw sweep outputs (model checkpoints + attention logs per run)
 
 ## Reproducing Results
@@ -87,6 +88,9 @@ python grok_multiseed_commutator.py
 
 # Step 8: Generalization dynamics (~15 min)
 python grok_generalization_dynamics.py
+
+# Step 9: Slow regime verification (~6 hours)
+python grok_slow_regime_commutator.py
 ```
 
 All figures are saved to `pca_sweep_plots/`.
@@ -130,6 +134,10 @@ All figures are saved to `pca_sweep_plots/`.
 - **figW2** `figW2_hero_defect_predicts_grok.png` -- Hero figure: single best example
 - **figX** `figX_defect_lead_time.png` -- Lead-time quantification
 
+### Slow Regime Verification (wd=0.1)
+- **figY** `figY_regime_comparison_commutator.png` -- Integrability, defect, lead time: slow vs fast regime
+- **figZ** `figZ_slow_regime_hero.png` -- Defect predicts grokking in slow regime (lead = 400k steps)
+
 ## Hardware
 
-Experiments were run on Apple M-series (MPS backend). GPU (CUDA) and CPU are also supported. Total compute for full reproduction: ~3 hours on a single machine.
+Experiments were run on Apple M-series (MPS backend). GPU (CUDA) and CPU are also supported. Total compute for full reproduction: ~9 hours on a single machine (6 hours for slow regime).
