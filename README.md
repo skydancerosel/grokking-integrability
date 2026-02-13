@@ -6,11 +6,11 @@ Empirical evidence that the weight-space trajectory during grokking in modular a
 
 1. **Rank-1 execution manifold.** PCA on attention weight trajectories during grokking reveals that 70--94% of variance is captured by a single principal component. Weight evolution during grokking is essentially one-dimensional.
 
-2. **The execution manifold is integrable.** Commutator defect vectors (measuring loss-landscape curvature) are perfectly orthogonal to the PCA submanifold: residual/full = 1.000 +/- 0.000 across 36 conditions (6 operations x 2 weight-decay settings x 3 seeds). The learned subspace is flat.
+2. **The execution manifold is integrable.** Commutator defect vectors (measuring loss-landscape curvature) are perfectly orthogonal to the PCA submanifold: residual/full = 1.000 +/- 0.000 across 36 conditions (6 operations x 2 weight-decay settings x 3 seeds). A random-subspace baseline control confirms the small parallel component is geometrically structured (exec/random ≈ 1.8–2.9×), ruling out dimensionality artifacts. The learned subspace is flat.
 
 3. **Curvature explodes orthogonally during grokking.** Operations that grok show 10--1000x higher commutator defect than non-grokking controls, concentrated entirely outside the execution manifold.
 
-4. **Defect spike predicts grokking.** The commutator defect spike precedes the generalization transition by 600--1600 training steps (mean 1117) across all 12 grokking runs (4 operations x 3 seeds), with 100% consistency.
+4. **Defect spike predicts grokking.** The commutator defect spike precedes the generalization transition by 600--1600 training steps (mean 1117) across all 12 grokking runs (4 operations x 3 seeds), with 100% consistency (sign test p = 2^{-12} < 0.001). Non-grokking operations show no comparable spike.
 
 5. **Findings are regime-invariant.** All results replicate in a qualitatively different slow regime (lr=5e-5, wd=0.1, 3 layers) where grokking takes ~570k steps instead of ~3k. Integrability remains perfect (resid/full = 1.000) and the defect spike still precedes grokking, now by ~540k--575k steps.
 
@@ -79,6 +79,7 @@ Integrability and the defect-predicts-grokking pattern are **regime-invariant**:
 | Script | Purpose |
 |--------|---------|
 | `grok_sweep_slow.py` | Slow-regime training (lr=5e-5, wd=0.1, 3 layers) for regime comparison |
+| `grok_integrability_controls.py` | Random subspace baseline control: exec vs random projection |
 | `pca_diagnostic.py` | Tests whether snapshot count explains PC1% variation |
 
 ### Output
@@ -158,9 +159,16 @@ All figures are saved to `pca_sweep_plots/`.
 - **figV** `figV_temporal_add_seeds.png` -- Temporal traces with seed overlay
 
 ### Generalization Dynamics
-- **figW** `figW_defect_predicts_grokking.png` -- Defect vs test accuracy, 4 operations
+- **figW** `figW_defect_predicts_grokking.png` -- Defect vs test accuracy: 4 grokking + 2 non-grokking controls
 - **figW2** `figW2_hero_defect_predicts_grok.png` -- Hero figure: single best example
-- **figX** `figX_defect_lead_time.png` -- Lead-time quantification
+- **figX** `figX_defect_lead_time.png` -- Lead-time quantification (sign test: p = 2^{-12} < 0.001)
+
+### Random Subspace Control
+- **figC1** `figC1_exec_vs_random.png` -- Exec vs random projection fraction over training (4 ops)
+- **figC2** `figC2_exec_over_random_ratio.png` -- Exec/random ratio over training with defect overlay
+- **figC3** `figC3_dimension_sweep.png` -- Projection fraction vs basis dimension K
+- **figC4** `figC4_phase_comparison.png` -- Exec/random ratio by training phase
+- **figC5** `figC5_hero.png` -- Combined: defect × exec/random ratio × test accuracy
 
 ### Slow Regime Verification (wd=0.1)
 - **figY** `figY_regime_comparison_commutator.png` -- Integrability, defect, lead time: slow vs fast regime
