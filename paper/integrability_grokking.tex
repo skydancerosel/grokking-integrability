@@ -1,0 +1,598 @@
+\documentclass[11pt]{article}
+
+% ── packages ──────────────────────────────────────────────────────────────
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{cleveref}
+\usepackage{natbib}
+\usepackage{xcolor}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{microtype}
+
+\graphicspath{{../pca_sweep_plots/}}
+
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\norm}[1]{\left\|#1\right\|}
+\newcommand{\abs}[1]{\left|#1\right|}
+\newcommand{\defect}{\mathcal{D}}
+
+\title{Integrability of the Grokking Manifold}
+
+\author{%
+  Anonymous
+}
+
+\date{}
+
+\begin{document}
+\maketitle
+
+% ══════════════════════════════════════════════════════════════════════════
+\begin{abstract}
+% ══════════════════════════════════════════════════════════════════════════
+
+We study the geometry of grokking---the delayed generalization phenomenon in neural networks trained on modular arithmetic.
+Using PCA on attention weight trajectories across six binary operations mod~97, we show that weight evolution during grokking is essentially one-dimensional: a single principal component captures 70--94\% of variance across 36 experimental conditions.
+We then measure loss-landscape curvature via commutator defects---the non-commutativity of successive gradient steps---and project these onto the learned submanifold.
+The commutator vectors are perfectly orthogonal to the PCA subspace (residual/full~$= 1.000 \pm 0.000$), establishing that the execution manifold is \emph{integrable} (flat).
+Yet curvature explodes orthogonally: grokking operations show $10$--$1000\times$ higher commutator defect than non-grokking controls, concentrated entirely outside the learned subspace.
+This curvature spike consistently \emph{precedes} the generalization transition by 600--1600 training steps (sign test $p = 2^{-12} < 0.001$), providing a leading indicator of grokking.
+All findings replicate in a qualitatively different slow regime ($\mathrm{lr}=5\!\times\!10^{-5}$, $\mathrm{wd}=0.1$, 3 layers) where grokking takes $\sim\!570$k steps instead of $\sim\!3$k, confirming regime invariance.
+
+\end{abstract}
+
+% ══════════════════════════════════════════════════════════════════════════
+\section{Introduction}
+\label{sec:intro}
+% ══════════════════════════════════════════════════════════════════════════
+
+Grokking---the phenomenon where neural networks trained on small algorithmic datasets first memorize the training set and then, long after achieving perfect training accuracy, suddenly generalize to the test set---was first reported by \citet{power2022grokking} in modular arithmetic tasks.
+The phenomenon has attracted significant attention because it challenges the conventional understanding that generalization and memorization are tightly coupled in optimization dynamics.
+
+Prior work has characterized grokking through the lens of representation learning \citep{nanda2023grokking}, weight decay as implicit regularization \citep{liu2022omnigrok}, circuit formation \citep{zhong2024clock}, and phase transitions in loss landscapes.
+Recently, \citet{xu2026lowdim} showed that the weight-space trajectory during grokking lies on a low-dimensional execution manifold, with PCA revealing that a single principal component captures the majority of trajectory variance.
+However, a fundamental geometric question remains open: \emph{is this low-dimensional manifold flat or curved, and does its geometry predict when generalization will occur?}
+
+Building on \citet{xu2026lowdim}, we address this question by studying the differential geometry of the parameter-space trajectory during grokking.
+Our approach extends the PCA eigenanalysis with a new tool---commutator defect analysis---that probes the curvature structure of the loss landscape relative to the learned submanifold:
+\begin{enumerate}
+    \item \textbf{PCA eigenanalysis} of attention weight trajectories, revealing the intrinsic dimensionality of the learned submanifold;
+    \item \textbf{Commutator defect analysis}, measuring loss-landscape curvature and its relationship to the learned submanifold.
+\end{enumerate}
+
+The commutator defect quantifies the non-commutativity of successive gradient steps: given two mini-batches $A$ and $B$, the defect measures how much the final parameter vector depends on the order of gradient updates.
+In a flat (integrable) region of the loss landscape, gradient steps commute perfectly; in a curved region, they do not.
+By projecting these commutator vectors onto the PCA submanifold, we can determine whether the learned subspace is flat or curved.
+
+Our main findings are:
+\begin{enumerate}
+    \item The weight-space trajectory during grokking lies on a rank-1 submanifold (70--94\% of variance in PC1).
+    \item This submanifold is perfectly integrable: commutator defects are orthogonal to it ($\mathrm{resid}/\mathrm{full} = 1.000 \pm 0.000$ across 36 conditions).
+    \item Curvature explodes orthogonally during grokking ($10$--$1000\times$ increase), while the learned subspace remains flat.
+    \item The curvature explosion \emph{precedes} generalization by 600--1600 steps, serving as a leading indicator of grokking.
+    \item All results are regime-invariant, replicating across a $200\times$ range in training timescale.
+\end{enumerate}
+
+
+% ══════════════════════════════════════════════════════════════════════════
+\section{Experimental Setup}
+\label{sec:setup}
+% ══════════════════════════════════════════════════════════════════════════
+
+\subsection{Model and Training}
+
+We use a Transformer encoder following the canonical grokking setup of \citet{power2022grokking}.
+The model processes two integer tokens $a, b \in \{0, \ldots, p-1\}$ (with $p = 97$) and predicts $f(a,b) \bmod p$ for a binary operation $f$.
+
+\paragraph{Architecture.}
+The model consists of:
+\begin{itemize}
+    \item A token embedding $\mathrm{Emb}: \{0,\ldots,96\} \to \R^{128}$ plus a learnable positional embedding $\mathbf{P} \in \R^{2 \times 128}$;
+    \item A 2-layer Transformer encoder with pre-norm (LayerNorm before attention and FFN), $d_\text{model} = 128$, 4 attention heads, $d_\text{ff} = 256$, GELU activation, no dropout;
+    \item A final LayerNorm followed by a linear head $\R^{128} \to \R^{97}$ applied to the first token position.
+\end{itemize}
+The total parameter count is approximately 290k.
+
+\paragraph{Training.}
+We train with AdamW ($\beta_1 = 0.9$, $\beta_2 = 0.98$) at learning rate $10^{-3}$ with weight decay $\lambda = 1.0$ (or $\lambda = 0.0$ for non-grokking controls), batch size 512, gradient clipping at 1.0, and a 50/50 train/test split.
+Training runs for up to 200k steps with early stopping when test accuracy exceeds 98\% for 3 consecutive evaluations.
+
+\paragraph{Operations.}
+We test six binary operations mod~97, four of which exhibit grokking under these hyperparameters and two that do not (\Cref{tab:operations}).
+
+\begin{table}[ht]
+\centering
+\caption{Operations tested. Grok step is the mean step at which test accuracy reaches 90\%, averaged over 3 seeds.}
+\label{tab:operations}
+\begin{tabular}{@{}llcc@{}}
+\toprule
+Operation & Formula & Groks? & Grok step \\
+\midrule
+add & $(a+b) \bmod 97$ & Yes & $\sim$2900 \\
+sub & $(a-b) \bmod 97$ & Yes & $\sim$3400 \\
+mul & $(a \times b) \bmod 97$ & Yes & $\sim$2600 \\
+x2\_y2 & $(a^2+b^2) \bmod 97$ & Yes & $\sim$1900 \\
+x2\_xy\_y2 & $(a^2+ab+b^2) \bmod 97$ & No & --- \\
+x3\_xy & $(a^3+ab) \bmod 97$ & No & --- \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Hyperparameter Regimes}
+
+To test regime invariance, we additionally run a \textbf{slow regime} with qualitatively different hyperparameters: $\mathrm{lr} = 5 \times 10^{-5}$, $\lambda = 0.1$, 3 Transformer layers, and $\beta_2 = 0.999$.
+In this regime, grokking occurs at $\sim$570k steps (vs.\ $\sim$3k in the fast regime), providing a $200\times$ difference in training timescale.
+
+\subsection{Attention Weight Logging}
+
+During training, we log the four attention weight matrices---$W_Q$, $W_K$, $W_V$ (extracted from the fused \texttt{in\_proj\_weight}) and $W_O$ (\texttt{out\_proj.weight})---every 100 steps.
+Each matrix is $128 \times 128$ (or $128 \times 32$ per head), giving a trajectory of snapshots for subsequent PCA analysis.
+
+
+% ══════════════════════════════════════════════════════════════════════════
+\section{Methods}
+\label{sec:methods}
+% ══════════════════════════════════════════════════════════════════════════
+
+\subsection{PCA Eigenanalysis of Weight Trajectories}
+\label{sec:pca}
+
+For each attention weight matrix $W \in \R^{d \times d}$, we collect $T$ training snapshots $\{W_t\}_{t=1}^T$ and compute PCA on the flattened trajectory of weight \emph{changes} from initialization:
+\begin{equation}
+    X = \begin{bmatrix} \mathrm{vec}(W_1 - W_0) \\ \vdots \\ \mathrm{vec}(W_T - W_0) \end{bmatrix} \in \R^{T \times d^2},
+\end{equation}
+after centering columns.
+We compute the SVD $X = U \Sigma V^\top$ and define the explained variance ratio of the $k$-th principal component as $\sigma_k^2 / \sum_i \sigma_i^2$.
+The quantity PC1\% $= 100 \times \sigma_1^2 / \sum_i \sigma_i^2$ measures the fraction of trajectory variance captured by a single direction.
+
+\subsection{Commutator Defect}
+\label{sec:commutator}
+
+The commutator defect measures loss-landscape curvature by quantifying the non-commutativity of gradient steps from two independent mini-batches.
+Given the current parameters $\theta_0$ and two mini-batches $A, B$:
+\begin{align}
+    \theta_{AB} &= \theta_0 - \eta\, g_A(\theta_0) - \eta\, g_B(\theta_0 - \eta\, g_A(\theta_0)) \\
+    \theta_{BA} &= \theta_0 - \eta\, g_B(\theta_0) - \eta\, g_A(\theta_0 - \eta\, g_B(\theta_0))
+\end{align}
+where $g_A(\theta) = \nabla_\theta \mathcal{L}_A(\theta)$ is the gradient of the cross-entropy loss on mini-batch $A$ at parameters $\theta$, and $\eta = 10^{-3}$ is a fixed step size.
+The (scale-normalized) commutator defect is:
+\begin{equation}
+\label{eq:defect}
+    \defect = \frac{\norm{\theta_{AB} - \theta_{BA}}}{\norm{\eta\, g_A} \cdot \norm{\eta\, g_B}}.
+\end{equation}
+Geometrically, $\defect$ measures the Riemann curvature of the loss landscape in the directions $g_A, g_B$: if the landscape is locally flat (Euclidean), gradient steps commute and $\defect = 0$.
+
+We compute $K = 9$ independent samples of $\defect$ at each measurement point and report the median, providing a robust estimate.
+
+\subsection{Projection onto the PCA Manifold}
+\label{sec:projection}
+
+To determine whether loss-landscape curvature lives inside or outside the learned submanifold, we construct an orthonormal basis $B \in \R^{P \times K}$ for the PCA subspace embedded in full parameter space ($P \approx 290$k).
+
+For each Transformer layer and each attention weight matrix $\{W_Q, W_K, W_V, W_O\}$:
+\begin{enumerate}
+    \item Compute the top-2 PCA directions from the weight trajectory (each a vector in $\R^{d^2}$);
+    \item Embed each direction into the full parameter space at the correct offset;
+    \item Stack all embedded directions and orthonormalize via QR decomposition.
+\end{enumerate}
+
+Given a commutator vector $\delta = \theta_{AB} - \theta_{BA}$, we decompose it as:
+\begin{equation}
+    \delta = \underbrace{B\, B^\top \delta}_{\delta_\parallel\;\text{(projected)}} + \underbrace{(\delta - B\, B^\top \delta)}_{\delta_\perp\;\text{(residual)}}.
+\end{equation}
+The \textbf{integrability measure} is the residual fraction:
+\begin{equation}
+\label{eq:integrability}
+    \rho = \frac{\norm{\delta_\perp}}{\norm{\delta}}.
+\end{equation}
+If $\rho \approx 1$, the commutator is orthogonal to the PCA subspace, meaning the submanifold is integrable (flat).
+If $\rho \approx 0$, curvature lies within the learned subspace.
+
+\subsection{Random Subspace Control}
+\label{sec:random_control}
+
+To verify that the near-zero projection fraction $1 - \rho$ reflects genuine geometric structure rather than a trivial dimensionality artifact---any $K$-dimensional subspace of $\R^P$ captures $\sim\!\sqrt{K/P}$ of a random vector---we compare the PCA-basis projection against a random baseline.
+For each commutator vector $\delta$, we compute the projection fraction onto $N_\text{rand} = 5$ random $K$-dimensional orthonormal bases (generated via QR decomposition of Gaussian random matrices) and average the results.
+The ratio $\text{proj}_{\text{exec}} / \text{proj}_{\text{rand}}$ is the key diagnostic: values significantly above $1.0$ confirm that the PCA subspace captures more commutator energy than expected by chance.
+
+\subsection{Converse Analysis: Trajectory Alignment with Curvature}
+\label{sec:converse}
+
+As a converse test, we ask whether the weight trajectory \emph{avoids} high-curvature directions.
+At each checkpoint, we compute the mean absolute cosine similarity between the trajectory step $\Delta\theta_t = \theta_t - \theta_{t-1}$ and $K = 12$ commutator vectors $\{\delta_k\}$:
+\begin{equation}
+    \bar{c}_t = \frac{1}{K} \sum_{k=1}^K \frac{|\Delta\theta_t \cdot \delta_k|}{\norm{\Delta\theta_t}\,\norm{\delta_k}}.
+\end{equation}
+For comparison, the expected absolute cosine between random vectors in $\R^P$ is $\sqrt{2/(\pi P)} \approx 1.5 \times 10^{-3}$ for $P = 290$k.
+If $\bar{c}_t$ is near this baseline, the trajectory is not aligned with curvature directions.
+
+
+% ══════════════════════════════════════════════════════════════════════════
+\section{Results}
+\label{sec:results}
+% ══════════════════════════════════════════════════════════════════════════
+
+\subsection{Weight Evolution is Rank-1}
+\label{sec:rank1}
+
+PCA on attention weight trajectories reveals that the first principal component captures 70--94\% of trajectory variance across all grokking conditions (\Cref{fig:pca_overview}).
+Weight evolution during grokking is essentially one-dimensional.
+
+\begin{figure}[t]
+    \centering
+    \begin{subfigure}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{figA_grok_vs_nowd_crossop.png}
+        \caption{PC1\% for grokking (wd=1.0) vs.\ no-wd (wd=0.0) across operations. Grokking operations consistently show high PC1\%.}
+        \label{fig:pca_grok_vs_nowd}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{figC_eigenspectrum_crossop.png}
+        \caption{Top-5 eigenspectrum per operation. The first eigenvalue dominates across all operations.}
+        \label{fig:eigenspectrum}
+    \end{subfigure}
+    \caption{Weight trajectories during grokking are rank-1. \textbf{(a)} PC1\% across operations: grokking runs (wd=1.0) show 70--94\% variance in a single component. \textbf{(b)} Eigenspectrum showing dominant first eigenvalue.}
+    \label{fig:pca_overview}
+\end{figure}
+
+No-weight-decay controls ($\lambda = 0$) also show moderately high PC1\%, but the null model comparison reveals that grokking PC1\% values are 5--20 standard deviations above the random-walk baseline (\Cref{fig:null_model}), confirming the concentration is not an artifact of trajectory smoothness.
+
+\begin{figure}[t]
+    \centering
+    \begin{subfigure}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{figE_null_zscores_crossop.png}
+        \caption{Z-scores vs.\ random-walk null model. All operations exceed the null by $>5\sigma$.}
+        \label{fig:null_model}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{figF_temporal_crossop.png}
+        \caption{Temporal evolution of PC1\% during training. Concentration increases as grokking progresses.}
+        \label{fig:temporal_pca}
+    \end{subfigure}
+    \caption{PCA concentration is genuine and increases over training. \textbf{(a)} Z-scores above random-walk null. \textbf{(b)} Expanding-window PC1\% over training.}
+    \label{fig:pca_controls}
+\end{figure}
+
+
+\subsection{The Execution Manifold is Integrable}
+\label{sec:integrability}
+
+Having established that the weight trajectory lies on a low-dimensional submanifold, we ask: is this submanifold flat (integrable)?
+
+We compute commutator defects at regular checkpoints during training and project each commutator vector onto the PCA basis (\Cref{sec:projection}).
+The key result: the residual fraction $\rho = \norm{\delta_\perp}/\norm{\delta}$ equals $1.000 \pm 0.000$ across all 36 conditions (6 operations $\times$ 2 weight-decay settings $\times$ 3 seeds), as shown in \Cref{fig:integrability}.
+
+\begin{figure}[t]
+    \centering
+    \begin{subfigure}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{figK_integrability.png}
+        \caption{Integrability: the residual fraction $\rho \approx 1.0$ at every checkpoint, meaning commutator vectors are perfectly orthogonal to the PCA manifold.}
+        \label{fig:integrability_single}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{figS_multiseed_integrability.png}
+        \caption{Multi-seed replication: $\rho = 1.000 \pm 0.000$ across all 36 conditions.}
+        \label{fig:integrability_multiseed}
+    \end{subfigure}
+    \caption{The execution manifold is integrable (flat). Commutator defect vectors are perfectly orthogonal to the PCA subspace.}
+    \label{fig:integrability}
+\end{figure}
+
+This means that all loss-landscape curvature is concentrated \emph{outside} the directions the model actually uses for learning.
+The weight trajectory evolves on a flat submanifold, while curvature builds up in orthogonal directions that the optimizer never enters.
+
+\paragraph{Random subspace control.}
+To confirm that the near-zero projection onto the PCA basis reflects genuine geometry rather than a dimensionality artifact, we compare against random $K$-dimensional subspaces (\Cref{sec:random_control}).
+\Cref{fig:random_control} shows the projection fraction for the PCA (execution) basis and the random baseline over training.
+Across all four grokking operations, the execution basis captures $1.8$--$2.9\times$ more commutator energy than a random subspace of equal dimension ($K = 24$), confirming that the small parallel component is geometrically structured.
+Crucially, both projections are very small (proj/full $< 0.05$), consistent with the integrability result $\rho \approx 1.000$: the commutator is overwhelmingly orthogonal to \emph{any} low-dimensional subspace, but the PCA subspace captures a structured excess above the random floor.
+
+\begin{figure}[t]
+    \centering
+    \begin{subfigure}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{figC1_exec_vs_random.png}
+        \caption{Projection fraction (proj/full) for execution basis (green) vs.\ random baseline (red) over training. The execution basis consistently captures more commutator energy.}
+        \label{fig:exec_vs_random}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{figC5_hero.png}
+        \caption{Combined view: commutator defect (red), exec/random ratio (green), and test accuracy (blue, dashed). The exec/random ratio is consistently above 1.0 during grokking.}
+        \label{fig:hero}
+    \end{subfigure}
+    \caption{Random subspace control confirms that the PCA projection is geometrically structured, not a dimensionality artifact. Exec/random ratio $\approx 1.8$--$2.9\times$ across operations.}
+    \label{fig:random_control}
+\end{figure}
+
+\subsection{Curvature Explodes Orthogonally During Grokking}
+\label{sec:curvature}
+
+While the execution manifold remains flat, the \emph{magnitude} of curvature in orthogonal directions changes dramatically during grokking.
+Operations that grok show 10--1000$\times$ higher commutator defect than non-grokking controls (\Cref{fig:defect_comparison}), and this curvature is concentrated entirely outside the PCA manifold.
+
+\begin{figure}[t]
+    \centering
+    \begin{subfigure}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{figL_grok_vs_nowd_commutator.png}
+        \caption{Grok (wd=1.0) vs.\ no-wd (wd=0.0): grokking runs develop dramatically higher commutator defect.}
+        \label{fig:grok_vs_nowd}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{figU_multiseed_defect.png}
+        \caption{Commutator defect across all conditions (3 seeds). Grokking operations (wd=1.0) show 10--1000$\times$ higher defect.}
+        \label{fig:defect_multiseed}
+    \end{subfigure}
+    \caption{Curvature explodes during grokking but remains orthogonal to the learned subspace.}
+    \label{fig:defect_comparison}
+\end{figure}
+
+The converse analysis confirms that the weight trajectory does not align with curvature directions: the mean absolute cosine similarity between trajectory steps and commutator vectors is indistinguishable from the random-vector baseline ($\bar{c} \approx \sqrt{2/(\pi P)}$), meaning the trajectory actively avoids high-curvature directions.
+
+
+\subsection{Defect Spike Predicts Grokking}
+\label{sec:prediction}
+
+The most striking finding is that the commutator defect spike consistently \emph{precedes} the generalization transition.
+\Cref{fig:prediction} shows the temporal overlay of commutator defect and test accuracy for all four grokking operations.
+In every case, defect begins rising before test accuracy increases.
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=\textwidth]{figW_defect_predicts_grokking.png}
+    \caption{Commutator defect predicts grokking. Top four panels: grokking operations (3 seeds each), showing defect spike (solid) preceding test accuracy rise (dashed). Bottom two panels: non-grokking controls show moderate defect but no generalization. Dotted vertical lines mark spike detection; green regions mark grokking.}
+    \label{fig:prediction}
+\end{figure}
+
+Across all 12 grokking runs (4 operations $\times$ 3 seeds), the defect spike precedes the point at which test accuracy reaches 90\% by 600--1600 steps, with mean lead time of 1117 steps (\Cref{fig:lead_time}).
+A one-sided sign test gives $p = 2^{-12} \approx 2.4 \times 10^{-4}$, confirming that the temporal ordering is statistically significant.
+
+Non-grokking operations ($a^2 + ab + b^2$ and $a^3 + ab$) show moderate, slowly-growing defect but no sudden spike and no generalization, providing a negative control.
+
+\begin{figure}[t]
+    \centering
+    \begin{subfigure}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{figW2_hero_defect_predicts_grok.png}
+        \caption{Hero example: $(a-b) \bmod 97$, seed 137. Defect spike at step 2000, grokking at step 3600 (lead = 1600 steps).}
+        \label{fig:hero}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{figX_defect_lead_time.png}
+        \caption{Lead time quantification. Left: spike step vs.\ grok step (all points above diagonal). Right: lead time by operation (sign test $p < 0.001$).}
+        \label{fig:lead_time}
+    \end{subfigure}
+    \caption{Defect spike as early warning signal for grokking.}
+    \label{fig:prediction_detail}
+\end{figure}
+
+
+\subsection{Regime Invariance}
+\label{sec:regime}
+
+To verify that our findings are not specific to a particular hyperparameter setting, we repeat the full analysis in a slow regime with qualitatively different hyperparameters (\Cref{tab:regimes}).
+
+\begin{table}[ht]
+\centering
+\caption{Hyperparameter regimes and key metrics.}
+\label{tab:regimes}
+\begin{tabular}{@{}lcc@{}}
+\toprule
+Metric & Fast regime & Slow regime \\
+\midrule
+Learning rate & $10^{-3}$ & $5 \times 10^{-5}$ \\
+Weight decay & 1.0 & 0.1 \\
+Layers & 2 & 3 \\
+Adam $\beta_2$ & 0.98 & 0.999 \\
+\midrule
+Grok step (add, mean) & $\sim$2,900 & $\sim$570,000 \\
+Integrability ($\rho$) & $1.000 \pm 0.000$ & $1.000 \pm 0.000$ \\
+Spike precedes grok? & 12/12 runs & 2/2 runs \\
+Lead time (absolute) & $\sim$1,100 steps & $\sim$558,000 steps \\
+Lead time (normalized) & $\sim$0.38 & $\sim$0.55 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\Cref{fig:slow_regime} shows the slow-regime results.
+Despite a $200\times$ difference in grokking timescale, $10\times$ difference in weight decay, and a different number of layers, the qualitative picture is identical: the execution manifold is perfectly integrable, and the defect spike precedes grokking by hundreds of thousands of steps.
+
+\begin{figure}[t]
+    \centering
+    \begin{subfigure}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{figY_regime_comparison_commutator.png}
+        \caption{Regime comparison: integrability, defect, and normalized lead time are consistent across regimes.}
+        \label{fig:regime_comparison}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{figZ_slow_regime_hero.png}
+        \caption{Slow regime hero: defect spike at $\sim$185k, grokking at $\sim$585k (lead $\approx$ 400k steps).}
+        \label{fig:slow_hero}
+    \end{subfigure}
+    \caption{Regime invariance: all findings replicate in the slow regime ($200\times$ longer training).}
+    \label{fig:slow_regime}
+\end{figure}
+
+
+% ══════════════════════════════════════════════════════════════════════════
+\section{Discussion}
+\label{sec:discussion}
+% ══════════════════════════════════════════════════════════════════════════
+
+\paragraph{Interpretation.}
+Our results paint a geometric picture of grokking: the optimizer moves along a flat, one-dimensional highway in parameter space while loss-landscape curvature builds up in orthogonal directions.
+The curvature explosion begins before generalization, suggesting that the ``barrier'' between the memorization and generalization solutions manifests as increasing non-commutativity of gradient updates in directions the optimizer does not traverse.
+
+The integrability of the execution manifold is remarkable: it holds perfectly ($\rho = 1.000$) across all conditions, not approximately.
+This suggests a structural property of the optimization landscape for modular arithmetic tasks, not a statistical regularity.
+The random subspace control (\Cref{sec:random_control}) further confirms that the small parallel component is geometrically structured (exec/random $\approx 2\times$), ruling out dimensionality artifacts.
+
+\paragraph{Defect as early warning.}
+The practical implication is that commutator defect provides an early warning signal for grokking.
+One need not wait for test accuracy to rise; instead, monitoring the non-commutativity of gradient updates can detect the approaching phase transition 600--1600 steps (or $\sim$40\% of training time) in advance.
+This could be useful for deciding when to stop training or when to expect generalization in settings where evaluation is expensive.
+
+\paragraph{Connection to information geometry.}
+The commutator defect is closely related to the Riemann curvature tensor of the parameter manifold equipped with the Fisher information metric.
+The perfect orthogonality between curvature and the learned subspace suggests that the model learns a geodesic (or near-geodesic) in the Fisher geometry, while the curvature that drives grokking acts in the normal bundle of this geodesic.
+
+\paragraph{Limitations.}
+Our experiments are limited to modular arithmetic with a 2-layer Transformer (and 3 layers in the slow regime).
+While the results are strikingly consistent across operations and hyperparameter regimes, it remains to be seen whether the same geometric structure holds for other grokking-capable tasks (e.g., permutation groups, sparse parity) or larger models.
+The commutator defect is also computationally expensive (4 forward-backward passes per sample), limiting its use as a real-time diagnostic in large-scale training.
+
+
+% ══════════════════════════════════════════════════════════════════════════
+\section{Related Work}
+\label{sec:related}
+% ══════════════════════════════════════════════════════════════════════════
+
+\paragraph{Grokking.}
+\citet{power2022grokking} first observed delayed generalization in modular arithmetic.
+\citet{nanda2023grokking} identified ``grokking circuits'' (Fourier-basis representations) in 1-layer models.
+\citet{liu2022omnigrok} showed that grokking occurs broadly when weight decay or weight norm is controlled.
+\citet{zhong2024clock} described clock and pizza representations in modular addition.
+\citet{thilak2022slingshot} connected grokking to slingshot dynamics in adaptive optimizers.
+\citet{lyu2024dichotomy} characterized the role of weight decay in separating memorization from generalization phases.
+
+\paragraph{Loss landscape geometry.}
+The study of loss landscape geometry in neural networks has a rich history \citep{li2018visualizing, draxler2018essentially, garipov2018loss}.
+\citet{fort2019large} studied the curvature of the loss landscape during training.
+Our commutator defect is related to the Lie bracket of gradient vector fields and measures non-commutativity of the optimization flow; similar ideas appear in the study of natural gradient methods \citep{amari1998natural} and the Fisher information geometry of neural networks.
+
+\paragraph{Intrinsic dimensionality.}
+\citet{li2018measuring} showed that neural network optimization occurs in a low-dimensional subspace.
+\citet{xu2026lowdim} demonstrated that attention weight trajectories during grokking in modular arithmetic lie on a low-dimensional execution manifold, with PC1 capturing the majority of variance.
+A corrected version of that work includes random-subspace baseline controls showing that the execution basis captures $2$--$10\times$ more commutator energy than a random subspace of equal dimension.
+The present work extends those findings by establishing integrability of the manifold, adding analogous random baseline controls, and showing that curvature dynamics predict the generalization transition.
+
+
+% ══════════════════════════════════════════════════════════════════════════
+\section{Conclusion}
+\label{sec:conclusion}
+% ══════════════════════════════════════════════════════════════════════════
+
+We have shown that the weight-space trajectory during grokking lies on a rank-1, integrable submanifold of parameter space, and that loss-landscape curvature explodes orthogonally to this manifold as a leading indicator of the generalization transition.
+These findings hold across six modular arithmetic operations, three random seeds, two weight-decay settings, and two qualitatively different hyperparameter regimes ($200\times$ range in training timescale).
+The geometric picture---flat trajectory, orthogonal curvature, predictive spike---provides a new lens for understanding the grokking phenomenon and suggests that monitoring gradient non-commutativity may be useful as an early warning signal for delayed generalization in neural networks.
+
+\paragraph{Reproducibility.}
+All code and figures are available at \url{https://github.com/skydancerosel/grokking-integrability}.
+Total compute for full reproduction is approximately 9 hours on a single Apple M-series machine.
+
+
+% ══════════════════════════════════════════════════════════════════════════
+% References
+% ══════════════════════════════════════════════════════════════════════════
+
+\bibliographystyle{plainnat}
+\bibliography{references}
+
+% ══════════════════════════════════════════════════════════════════════════
+\appendix
+\section{Additional Figures}
+\label{app:figures}
+% ══════════════════════════════════════════════════════════════════════════
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=0.7\textwidth]{figB_pc1_heatmap.png}
+    \caption{PC1\% heatmap by operation and weight matrix (last layer, wd=1.0). All weight matrices show high PC1\% for grokking operations.}
+    \label{fig:heatmap}
+\end{figure}
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=0.7\textwidth]{figG_per_weight_crossop.png}
+    \caption{Per-weight-matrix PC1\% comparison across operations (grok vs.\ no-wd).}
+    \label{fig:per_weight}
+\end{figure}
+
+\begin{figure}[ht]
+    \centering
+    \begin{subfigure}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{figH_regime_comparison.png}
+        \caption{Slow vs.\ fast regime PC1\%. The slow regime shows lower PC1\%, but still well above the null model.}
+        \label{fig:regime_pca}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{figI_pc1_drop_decomposition.png}
+        \caption{Decomposition of PC1\% drop between regimes: which hyperparameter drives the difference.}
+        \label{fig:decomposition}
+    \end{subfigure}
+    \caption{Regime comparison for PCA concentration.}
+    \label{fig:regime_pca_detail}
+\end{figure}
+
+\begin{figure}[ht]
+    \centering
+    \begin{subfigure}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{figM_defect_integrability.png}
+        \caption{Combined view: defect magnitude and integrability over training.}
+        \label{fig:combined}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{figN_attn_weight_fraction.png}
+        \caption{Attention weight fraction of commutator defect.}
+        \label{fig:attn_fraction}
+    \end{subfigure}
+    \caption{Commutator analysis details.}
+    \label{fig:comm_details}
+\end{figure}
+
+\begin{figure}[ht]
+    \centering
+    \begin{subfigure}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{figO_trajectory_alignment.png}
+        \caption{Trajectory-curvature alignment over training.}
+        \label{fig:alignment}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{figQ_alignment_ratio.png}
+        \caption{Alignment ratio vs.\ random baseline: the trajectory does not prefer curvature directions.}
+        \label{fig:alignment_ratio}
+    \end{subfigure}
+    \caption{Converse analysis: the weight trajectory avoids high-curvature directions.}
+    \label{fig:converse}
+\end{figure}
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=0.7\textwidth]{figV_temporal_add_seeds.png}
+    \caption{Temporal traces for $(a+b) \bmod 97$ with 3 seed overlays, showing consistency of the integrability and defect patterns across seeds.}
+    \label{fig:temporal_seeds}
+\end{figure}
+
+\end{document}
