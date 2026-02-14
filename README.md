@@ -1,24 +1,28 @@
-# Integrability of the Grokking Manifold
+# Effective Integrability of Grokking Dynamics
 
-Empirical evidence that the weight-space trajectory during grokking in modular arithmetic lies on an **integrable (flat) submanifold** of parameter space, and that curvature explosion orthogonal to this manifold serves as a **leading indicator** of the generalization transition.
+Empirical evidence that the weight-space trajectory during grokking in modular arithmetic lies on an **effectively integrable (flat) submanifold** of parameter space, that curvature explosion orthogonal to this manifold serves as a **leading indicator** of the generalization transition, and that **causal interventions** confirm orthogonal gradient flow is necessary for grokking.
+
+**Paper**: [`paper/integrability_grokking.tex`](paper/integrability_grokking.tex) &nbsp;|&nbsp; **arXiv**: [2602.10496](https://arxiv.org/abs/2602.10496) (earlier version)
 
 ## Key Findings
 
 1. **Rank-1 execution manifold.** PCA on attention weight trajectories during grokking reveals that 70--94% of variance is captured by a single principal component. Weight evolution during grokking is essentially one-dimensional.
 
-2. **The execution manifold is integrable.** Commutator defect vectors (measuring loss-landscape curvature) are perfectly orthogonal to the PCA submanifold: residual/full = 1.000 +/- 0.000 across 36 conditions (6 operations x 2 weight-decay settings x 3 seeds). A random-subspace baseline control confirms the small parallel component is geometrically structured (exec/random ≈ 1.8–2.9×), ruling out dimensionality artifacts. The learned subspace is flat.
+2. **Effective integrability.** Commutator defect vectors (measuring loss-landscape curvature) are predominantly orthogonal to the PCA submanifold: residual/full = 1.000 within numerical precision across 36 conditions (6 operations x 2 weight-decay settings x 3 seeds). A random-subspace baseline confirms the small parallel component is geometrically structured (exec/random ~ 1.8--2.9x), ruling out dimensionality artifacts.
 
-3. **Curvature explodes orthogonally during grokking.** Operations that grok show 10--1000x higher commutator defect than non-grokking controls, concentrated entirely outside the execution manifold.
+3. **Curvature explodes orthogonally during grokking.** Operations that grok show 10--1000x higher commutator defect than non-grokking controls, concentrated outside the execution manifold.
 
-4. **Defect spike predicts grokking.** The commutator defect spike precedes the generalization transition by 600--1600 training steps (mean 1117) across all 12 grokking runs (4 operations x 3 seeds), with 100% consistency (sign test p = 2^{-12} < 0.001). Non-grokking operations show no comparable spike.
+4. **Defect spike predicts grokking.** The commutator defect spike precedes the generalization transition by 600--1600 training steps across all 12 grokking runs (4 operations x 3 seeds), with 100% consistency (sign test p = 2^{-12} < 0.001).
 
-5. **Findings are regime-invariant.** All results replicate in a qualitatively different slow regime (lr=5e-5, wd=0.1, 3 layers) where grokking takes ~570k steps instead of ~3k. Integrability remains perfect (resid/full = 1.000) and the defect spike still precedes grokking, now by ~540k--575k steps.
+5. **Regime-invariant.** All results replicate across a 100x learning rate sweep ({1e-4, 1e-3, 1e-2}), a qualitatively different slow regime (lr=5e-5, wd=0.1, 3 layers, ~200x timescale difference), and three random seeds.
+
+6. **Causal interventions.** Suppressing orthogonal gradient flow prevents grokking with a monotonic dose-response across four operations (necessary), while artificially boosting curvature defects has no effect (not sufficient). This establishes a directional causal relationship between execution-manifold geometry and generalization.
 
 ## Experimental Setup
 
 All experiments use the canonical grokking setup from [Power et al. (2022)](https://arxiv.org/abs/2201.02177):
-- **Model**: 2-layer Transformer, d_model=128, 4 heads, pre-norm
-- **Task**: Binary operations mod 97 (6 operations from Power et al.)
+- **Model**: 2-layer Transformer, d_model=128, 4 heads, d_ff=256, pre-norm, GELU, ~290k params
+- **Task**: Binary operations mod 97 (6 operations)
 - **Training**: AdamW, lr=1e-3, weight_decay=1.0, beta2=0.98
 - **Data split**: 30% train / 70% test
 
@@ -35,28 +39,22 @@ All experiments use the canonical grokking setup from [Power et al. (2022)](http
 
 ### Hyperparameter Regimes
 
-All core results (Steps 1--8) use the **fast regime**. Step 9 verifies that findings transfer to a qualitatively different **slow regime**.
-
 | Parameter | Fast Regime | Slow Regime |
 |-----------|-------------|-------------|
 | Learning rate | 1e-3 | 5e-5 |
 | Weight decay | 1.0 | 0.1 |
 | Layers | 2 | 3 |
-| Adam β₂ | 0.98 | 0.999 |
+| Adam beta2 | 0.98 | 0.999 |
 | Grok step (add, mean) | ~2,900 | ~570,000 |
 | Training budget | 7,500 steps | 650,000 steps |
 
-### Regime Comparison: Key Metrics
+### Learning Rate Sweep
 
-| Metric | Fast (lr=1e-3, wd=1.0, 2L) | Slow (lr=5e-5, wd=0.1, 3L) |
-|--------|---------------------------|---------------------------|
-| Integrability (resid/full) | 1.000 ± 0.000 | 1.000 ± 0.000 |
-| Defect spike precedes grokking? | Yes (12/12 runs) | Yes (2/2 runs) |
-| Mean lead time (to 90% acc) | ~1,100 steps | ~558,000 steps |
-| Normalized lead time (lead / grok step) | ~0.38 | ~0.55 |
-| Defect at grokking | ~50--190 | ~150--1,200 |
-
-Integrability and the defect-predicts-grokking pattern are **regime-invariant**: they hold identically despite 200x differences in training timescale, 10x differences in weight decay, and different model depths.
+| LR | Dynamical Regime | Grok Time (add) | Defect Precedes? |
+|----|-----------------|-----------------|-----------------|
+| 1e-4 | Overdamped | ~30k steps | Yes |
+| 1e-3 | Critically damped | ~3k steps | Yes |
+| 1e-2 | Underdamped | ~1k steps | Yes |
 
 ## Repository Structure
 
@@ -64,29 +62,36 @@ Integrability and the defect-predicts-grokking pattern are **regime-invariant**:
 
 | # | Script | What it does | Figures |
 |---|--------|-------------|---------|
-| 1 | `grok_sweep.py` | Train models across 6 operations x 2 weight-decay x 3 seeds, logging attention weights | -- |
+| 1 | `grok_sweep.py` | Train models across 6 ops x 2 wd x 3 seeds, logging attention weights | -- |
 | 2 | `pca_sweep_analysis.py` | PCA eigenanalysis on saved attention weight trajectories | figA--figG |
 | 3 | `pca_controls.py` | No-wd baseline, Fourier alignment, random-walk null model | (part of figA, figE) |
-| 4 | `pca_compare_regimes.py` | Compare slow (lr=5e-5) vs fast (lr=1e-3) hyperparameter regimes | figH, figI |
-| 5 | `grok_commutator_analysis.py` | Forward commutator analysis: project defect onto PCA manifold | figJ--figN |
+| 4 | `pca_compare_regimes.py` | Compare slow vs fast hyperparameter regimes | figH, figI |
+| 5 | `grok_commutator_analysis.py` | Forward commutator: project defect onto PCA manifold | figJ--figN |
 | 6 | `grok_converse_commutator.py` | Converse: project weight trajectory onto commutator subspace | figO--figR |
 | 7 | `grok_multiseed_commutator.py` | Multi-seed replication (3 seeds x 6 ops x 2 wd = 36 runs) | figS--figV |
 | 8 | `grok_generalization_dynamics.py` | Temporal: defect spike vs generalization transition timing | figW, figW2, figX |
 | 9 | `grok_slow_regime_commutator.py` | Slow regime (lr=5e-5, wd=0.1, 3L): integrability + defect timing | figY, figZ |
+| 10 | `grok_lr_sweep.py` | LR sweep phase diagram across {1e-4, 1e-3, 1e-2} | figPD, figPD2 |
+| 11 | `grok_lr_alignment.py` | Trajectory-curvature alignment across LRs + phase portrait | figPD3, figPD4 |
+| 12 | `grok_intervention.py` | Causal interventions: gradient suppression (5 conditions) | figI1--figI5 |
+| 13 | `grok_intervention_ablation.py` | PCA vs random projection ablation control | figI6, figI7 |
+| 14 | `grok_intervention_sustained_kick.py` | Sustained directional kicks (boosting curvature defect) | figI8, figI9 |
+| 15 | `grok_intervention_multiop.py` | Multi-operation dose-response replication | figI10, figI11 |
 
 ### Supporting Scripts
 
 | Script | Purpose |
 |--------|---------|
-| `grok_sweep_slow.py` | Slow-regime training (lr=5e-5, wd=0.1, 3 layers) for regime comparison |
+| `grok_sweep_slow.py` | Slow-regime training (lr=5e-5, wd=0.1, 3 layers) |
 | `grok_integrability_controls.py` | Random subspace baseline control: exec vs random projection |
 | `pca_diagnostic.py` | Tests whether snapshot count explains PC1% variation |
 
 ### Output
 
-- `pca_sweep_plots/` -- All publication figures (figA through figZ) and saved result tensors
+- `pca_sweep_plots/` -- All publication figures (figA through figZ, figPD, figI) and saved result tensors
 - `grok_sweep_results/` -- Raw sweep outputs (model checkpoints + attention logs per run)
-- `grok_sweep_results_slow/` -- Slow-regime sweep outputs (generated by `grok_sweep_slow.py`)
+- `grok_sweep_results_slow/` -- Slow-regime sweep outputs
+- `paper/` -- LaTeX source, compiled PDF, bibliography
 
 ## Reproducing Results
 
@@ -120,6 +125,18 @@ python grok_generalization_dynamics.py
 
 # Step 9: Slow regime verification (~6 hours)
 python grok_slow_regime_commutator.py
+
+# Step 10: LR sweep phase diagram (~1-1.5 hours on MPS)
+python grok_lr_sweep.py
+
+# Step 11: LR-curvature alignment analysis (~10 min)
+python grok_lr_alignment.py
+
+# Step 12: Causal interventions (~2 hours total)
+python grok_intervention.py
+python grok_intervention_ablation.py
+python grok_intervention_sustained_kick.py
+python grok_intervention_multiop.py
 ```
 
 All figures are saved to `pca_sweep_plots/`.
@@ -161,19 +178,49 @@ All figures are saved to `pca_sweep_plots/`.
 ### Generalization Dynamics
 - **figW** `figW_defect_predicts_grokking.png` -- Defect vs test accuracy: 4 grokking + 2 non-grokking controls
 - **figW2** `figW2_hero_defect_predicts_grok.png` -- Hero figure: single best example
-- **figX** `figX_defect_lead_time.png` -- Lead-time quantification (sign test: p = 2^{-12} < 0.001)
+- **figX** `figX_defect_lead_time.png` -- Lead-time quantification (sign test p = 2^{-12})
 
 ### Random Subspace Control
-- **figC1** `figC1_exec_vs_random.png` -- Exec vs random projection fraction over training (4 ops)
-- **figC2** `figC2_exec_over_random_ratio.png` -- Exec/random ratio over training with defect overlay
+- **figC1** `figC1_exec_vs_random.png` -- Exec vs random projection fraction over training
+- **figC2** `figC2_exec_over_random_ratio.png` -- Exec/random ratio with defect overlay
 - **figC3** `figC3_dimension_sweep.png` -- Projection fraction vs basis dimension K
 - **figC4** `figC4_phase_comparison.png` -- Exec/random ratio by training phase
-- **figC5** `figC5_hero.png` -- Combined: defect × exec/random ratio × test accuracy
+- **figC5** `figC5_hero.png` -- Combined: defect x exec/random ratio x test accuracy
 
-### Slow Regime Verification (wd=0.1)
-- **figY** `figY_regime_comparison_commutator.png` -- Integrability, defect, lead time: slow vs fast regime
-- **figZ** `figZ_slow_regime_hero.png` -- Defect predicts grokking in slow regime (lead = 400k steps)
+### Slow Regime Verification
+- **figY** `figY_regime_comparison_commutator.png` -- Integrability, defect, lead time: slow vs fast
+- **figZ** `figZ_slow_regime_hero.png` -- Defect predicts grokking in slow regime
+
+### Learning Rate Sweep
+- **figPD** `figPD_lr_phase_diagram.png` -- Phase diagram: grok fraction, grok step, max defect, lead time across 3 LRs x 6 ops
+- **figPD2** `figPD2_lr_sweep_hero.png` -- Hero: defect + test accuracy for 3 LRs on addition
+- **figPD3** `figPD3_lr_alignment.png` -- Trajectory-curvature alignment across LRs
+- **figPD4** `figPD4_alignment_vs_defect.png` -- Phase portrait: alignment ratio vs defect magnitude with dynamical regime labels
+
+### Causal Interventions
+- **figI1** `figI1_intervention_defect_trajectories.png` -- Defect trajectories under 5 intervention conditions
+- **figI2** `figI2_intervention_accuracy_overlay.png` -- Test accuracy overlay across conditions
+- **figI3** `figI3_intervention_grok_timing.png` -- Grok timing comparison
+- **figI4** `figI4_intervention_summary_table.png` -- Summary table of all conditions
+- **figI5** `figI5_intervention_hparam_sensitivity.png` -- Hyperparameter sensitivity
+- **figI6** `figI6_ablation_random_vs_pca.png` -- PCA vs random projection ablation: defect + accuracy
+- **figI7** `figI7_ablation_accuracy_overlay.png` -- Ablation accuracy overlay
+- **figI8** `figI8_sustained_kick_dose_response.png` -- Sustained directional kick dose-response
+- **figI9** `figI9_sustained_kick_overlay.png` -- Kick overlay: accuracy + defect
+- **figI10** `figI10_multiop_dose_response.png` -- Multi-operation dose-response (4 ops x 5 strengths)
+- **figI11** `figI11_multiop_combined.png` -- Combined multi-operation results
 
 ## Hardware
 
-Experiments were run on Apple M-series (MPS backend). GPU (CUDA) and CPU are also supported. Total compute for full reproduction: ~9 hours on a single machine (6 hours for slow regime).
+Experiments were run on Apple M-series (MPS backend). GPU (CUDA) and CPU are also supported. Total compute for full reproduction: ~12 hours on a single machine (6 hours slow regime, ~1.5 hours LR sweep, ~2 hours interventions, ~2.5 hours other).
+
+## Citation
+
+```bibtex
+@article{xu2026integrability,
+  title={Effective Integrability of Grokking Dynamics},
+  author={Xu, Yongzhong},
+  year={2026},
+  url={https://github.com/skydancerosel/grokking-integrability}
+}
+```
