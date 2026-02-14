@@ -1,6 +1,6 @@
-# Effective Integrability of Grokking Dynamics
+# Emergent Low-Dimensional Invariant Submanifolds in Grokking Dynamics
 
-Empirical evidence that the weight-space trajectory during grokking in modular arithmetic lies on an **effectively integrable (flat) submanifold** of parameter space, that curvature explosion orthogonal to this manifold serves as a **leading indicator** of the generalization transition, and that **causal interventions** confirm orthogonal gradient flow is necessary for grokking.
+We identify an emergent low-dimensional **invariant submanifold**---the *execution manifold*---in the weight space of transformers trained on modular arithmetic. Loss-landscape curvature is confined to the **normal bundle** of this submanifold, curvature explosion serves as a **leading indicator** of the generalization transition, and **causal interventions** confirm orthogonal gradient flow is necessary for grokking.
 
 **Paper**: [`paper/integrability_grokking.tex`](paper/integrability_grokking.tex) &nbsp;|&nbsp; **arXiv**: [2602.10496](https://arxiv.org/abs/2602.10496) (earlier version)
 
@@ -8,7 +8,7 @@ Empirical evidence that the weight-space trajectory during grokking in modular a
 
 1. **Rank-1 execution manifold.** PCA on attention weight trajectories during grokking reveals that 70--94% of variance is captured by a single principal component. Weight evolution during grokking is essentially one-dimensional.
 
-2. **Effective integrability.** Commutator defect vectors (measuring loss-landscape curvature) are predominantly orthogonal to the PCA submanifold: residual/full = 1.000 within numerical precision across 36 conditions (6 operations x 2 weight-decay settings x 3 seeds). A random-subspace baseline confirms the small parallel component is geometrically structured (exec/random ~ 1.8--2.9x), ruling out dimensionality artifacts.
+2. **Invariant submanifold.** Commutator defect vectors (measuring loss-landscape curvature) are predominantly orthogonal to the execution manifold: residual/full = 1.000 within numerical precision across 36 conditions (6 operations x 2 weight-decay settings x 3 seeds). Curvature is confined to the normal bundle---it does not deflect the trajectory out of its learned subspace. A random-subspace baseline confirms the small parallel component is geometrically structured (exec/random ~ 1.8--2.9x), ruling out dimensionality artifacts.
 
 3. **Curvature explodes orthogonally during grokking.** Operations that grok show 10--1000x higher commutator defect than non-grokking controls, concentrated outside the execution manifold.
 
@@ -70,7 +70,7 @@ All experiments use the canonical grokking setup from [Power et al. (2022)](http
 | 6 | `grok_converse_commutator.py` | Converse: project weight trajectory onto commutator subspace | figO--figR |
 | 7 | `grok_multiseed_commutator.py` | Multi-seed replication (3 seeds x 6 ops x 2 wd = 36 runs) | figS--figV |
 | 8 | `grok_generalization_dynamics.py` | Temporal: defect spike vs generalization transition timing | figW, figW2, figX |
-| 9 | `grok_slow_regime_commutator.py` | Slow regime (lr=5e-5, wd=0.1, 3L): integrability + defect timing | figY, figZ |
+| 9 | `grok_slow_regime_commutator.py` | Slow regime (lr=5e-5, wd=0.1, 3L): invariance + defect timing | figY, figZ |
 | 10 | `grok_lr_sweep.py` | LR sweep phase diagram across {1e-4, 1e-3, 1e-2} | figPD, figPD2 |
 | 11 | `grok_lr_alignment.py` | Trajectory-curvature alignment across LRs + phase portrait | figPD3, figPD4 |
 | 12 | `grok_intervention.py` | Causal interventions: gradient suppression (5 conditions) | figI1--figI5 |
@@ -156,11 +156,11 @@ All figures are saved to `pca_sweep_plots/`.
 - **figH** `figH_regime_comparison.png` -- Slow vs fast regime PC1%
 - **figI** `figI_pc1_drop_decomposition.png` -- Which hyperparameter drives PC1% drop
 
-### Commutator / Integrability (single seed)
+### Commutator / Invariance (single seed)
 - **figJ** `figJ_commutator_defect.png` -- Commutator defect over training
-- **figK** `figK_integrability.png` -- Integrability: commutators orthogonal to PCA manifold
+- **figK** `figK_integrability.png` -- Invariance: commutators orthogonal to execution manifold
 - **figL** `figL_grok_vs_nowd_commutator.png` -- Grok vs no-wd defect comparison
-- **figM** `figM_defect_integrability.png` -- Defect explosion + integrability combined
+- **figM** `figM_defect_integrability.png` -- Defect explosion + invariance measure combined
 - **figN** `figN_attn_weight_fraction.png` -- Attention weight fraction of commutator
 
 ### Converse Analysis (single seed)
@@ -170,7 +170,7 @@ All figures are saved to `pca_sweep_plots/`.
 - **figR** `figR_defect_vs_alignment.png` -- Defect vs alignment scatter
 
 ### Multi-Seed Replication
-- **figS** `figS_multiseed_integrability.png` -- Integrability bars (mean +/- std, 3 seeds)
+- **figS** `figS_multiseed_integrability.png` -- Invariance bars (mean +/- std, 3 seeds)
 - **figT** `figT_multiseed_alignment.png` -- Alignment bars (3 seeds)
 - **figU** `figU_multiseed_defect.png` -- Defect bars (3 seeds)
 - **figV** `figV_temporal_add_seeds.png` -- Temporal traces with seed overlay
@@ -188,7 +188,7 @@ All figures are saved to `pca_sweep_plots/`.
 - **figC5** `figC5_hero.png` -- Combined: defect x exec/random ratio x test accuracy
 
 ### Slow Regime Verification
-- **figY** `figY_regime_comparison_commutator.png` -- Integrability, defect, lead time: slow vs fast
+- **figY** `figY_regime_comparison_commutator.png` -- Invariance, defect, lead time: slow vs fast
 - **figZ** `figZ_slow_regime_hero.png` -- Defect predicts grokking in slow regime
 
 ### Learning Rate Sweep
@@ -217,8 +217,8 @@ Experiments were run on Apple M-series (MPS backend). GPU (CUDA) and CPU are als
 ## Citation
 
 ```bibtex
-@article{xu2026integrability,
-  title={Effective Integrability of Grokking Dynamics},
+@article{xu2026invariant,
+  title={Emergent Low-Dimensional Invariant Submanifolds in Grokking Dynamics},
   author={Xu, Yongzhong},
   year={2026},
   url={https://github.com/skydancerosel/grokking-integrability}

@@ -22,12 +22,13 @@
 \newcommand{\abs}[1]{\left|#1\right|}
 \newcommand{\defect}{\mathcal{D}}
 
-\title{Effective Integrability of Grokking Dynamics}
+\title{Emergent Low-Dimensional Invariant Submanifolds in Grokking Dynamics}
 
 \author{%
   Yongzhong Xu
+  \thanks{abbyxu@gmail.com ; code at https://github.com/skydancerosel/grokking-integrability}
 }
-\thanks{abbyxu@gmail.com ; code at https://github.com/skydancerosel/grokking-integrability}
+
 
 \date{}
 
@@ -39,11 +40,11 @@
 % ══════════════════════════════════════════════════════════════════════════
 
 Grokking---the abrupt onset of generalization long after memorization---challenges standard accounts of how neural networks learn, yet the geometric mechanisms driving this transition remain poorly understood.
-We study this phenomenon through the lens of optimization geometry, using PCA on attention weight trajectories and commutator defect analysis across six binary operations mod~97.
-We show that weight evolution during grokking is essentially one-dimensional: a single principal component captures 70--94\% of variance across 36 experimental conditions.
+We identify an emergent low-dimensional invariant submanifold---the \emph{execution manifold}---in the weight space of transformers trained on modular arithmetic.
+Using PCA on attention weight trajectories and commutator defect analysis across six binary operations mod~97, we show that weight evolution during grokking is essentially one-dimensional: a single principal component captures 70--94\% of variance across 36 experimental conditions.
 We then measure loss-landscape curvature via commutator defects---the non-commutativity of successive gradient steps---and project these onto the learned submanifold.
-The commutator vectors are predominantly orthogonal to the PCA subspace, even relative to random baselines (exec/random ratio $\approx 2$--$3\times$), indicating that the execution manifold is \emph{effectively flat} with respect to observed optimization directions.
-Yet curvature explodes orthogonally: grokking operations show $10$--$1000\times$ higher commutator defect than non-grokking controls, with the dominant component of curvature lying outside the learned subspace.
+The commutator vectors are predominantly orthogonal to the execution manifold, even relative to random baselines (exec/random ratio $\approx 2$--$3\times$), indicating that the submanifold is \emph{invariant} under the optimization dynamics: curvature does not deflect the trajectory out of its learned subspace.
+Yet curvature explodes orthogonally: grokking operations show $10$--$1000\times$ higher commutator defect than non-grokking controls, concentrated entirely in the normal bundle of the execution manifold.
 This curvature spike consistently \emph{precedes} the generalization transition by 600--1600 training steps (sign test $p = 2^{-12} < 0.001$), providing a leading indicator of grokking.
 All findings replicate across a $100\times$ learning rate sweep, a qualitatively different slow regime ($\mathrm{lr}=5\!\times\!10^{-5}$, $\mathrm{wd}=0.1$, 3 layers), and three random seeds, though alignment dynamics differ quantitatively between regimes.
 Causal intervention experiments establish that orthogonal gradient flow is necessary but not sufficient for grokking: suppressing it prevents generalization with a monotonic dose--response across four operations, while artificially boosting curvature defects has no effect.
@@ -60,7 +61,7 @@ The phenomenon has attracted significant attention because it challenges the con
 
 Prior work has characterized grokking through the lens of representation learning \citep{nanda2023grokking}, weight decay as implicit regularization \citep{liu2022omnigrok}, circuit formation \citep{zhong2024clock}, and phase transitions in loss landscapes.
 Recently, \citet{xu2026lowdim} showed that the weight-space trajectory during grokking lies on a low-dimensional execution manifold, with PCA revealing that a single principal component captures the majority of trajectory variance.
-However, a fundamental geometric question remains open: \emph{is this low-dimensional manifold flat or curved, and does its geometry predict when generalization will occur?}
+However, a fundamental geometric question remains open: \emph{is this low-dimensional manifold invariant under the optimization dynamics---does curvature deflect the trajectory out of its learned subspace---and does its geometry predict when generalization will occur?}
 
 Building on \citet{xu2026lowdim}, we address this question by studying the differential geometry of the parameter-space trajectory during grokking.
 Our approach extends the PCA eigenanalysis with a new tool---commutator defect analysis---that probes the curvature structure of the loss landscape relative to the learned submanifold:
@@ -77,7 +78,7 @@ By projecting these commutator vectors onto the PCA submanifold, we can determin
 Our work makes five main contributions, spanning observation, prediction, and causal testing:
 \begin{enumerate}
     \item \textbf{Rank-1 manifold}: The weight-space trajectory during grokking lies on a rank-1 submanifold (70--94\% of variance in PC1).
-    \item \textbf{Effective integrability}: This submanifold is effectively integrable at the measured resolution: commutator defects are predominantly orthogonal to it ($\rho \approx 1.000$ within numerical precision across 36 conditions, with exec/random projection ratio $\approx 2$--$3\times$).
+    \item \textbf{Invariant submanifold}: This submanifold is invariant under the optimization dynamics: commutator defects are predominantly orthogonal to it ($\rho \approx 1.000$ within numerical precision across 36 conditions, with exec/random projection ratio $\approx 2$--$3\times$), meaning curvature does not deflect the trajectory out of its learned subspace.
     \item \textbf{Predictive curvature}: Curvature explodes orthogonally during grokking ($10$--$1000\times$ increase) and the spike \emph{precedes} generalization by 600--1600 steps, serving as a leading indicator.
     \item \textbf{Causal interventions}: Suppressing orthogonal gradient flow prevents grokking (necessary) while boosting curvature defects has no effect (not sufficient), establishing an asymmetric causal relationship.
     \item \textbf{Robustness}: All results replicate across a $100\times$ learning rate sweep, a $200\times$ timescale difference between regimes, four operations, and three seeds.
@@ -204,13 +205,13 @@ Given a commutator vector $\delta = \theta_{AB} - \theta_{BA}$, we decompose it 
 \begin{equation}
     \delta = \underbrace{B\, B^\top \delta}_{\delta_\parallel\;\text{(projected)}} + \underbrace{(\delta - B\, B^\top \delta)}_{\delta_\perp\;\text{(residual)}}.
 \end{equation}
-The \textbf{integrability measure} is the residual fraction:
+The \textbf{invariance measure} is the residual fraction:
 \begin{equation}
-\label{eq:integrability}
+\label{eq:invariance}
     \rho = \frac{\norm{\delta_\perp}}{\norm{\delta}}.
 \end{equation}
-If $\rho \approx 1$, the commutator is orthogonal to the PCA subspace, indicating that the learned submanifold is effectively flat with respect to observed optimization directions.
-If $\rho \approx 0$, curvature lies within the learned subspace.
+If $\rho \approx 1$, the commutator is orthogonal to the PCA subspace, indicating that loss-landscape curvature is confined to the normal bundle and the execution manifold is invariant under the optimization dynamics---curvature does not deflect the trajectory out of its learned subspace.
+If $\rho \approx 0$, curvature lies within the learned subspace and the submanifold is not invariant.
 
 \subsection{Random Subspace Control}
 \label{sec:random_control}
@@ -238,7 +239,7 @@ If $\bar{c}_t$ is near this baseline, the trajectory is not aligned with curvatu
 % ══════════════════════════════════════════════════════════════════════════
 
 We present our findings in three stages.
-First, we establish the geometric structure of grokking: rank-1 weight trajectories on an effectively integrable manifold with orthogonal curvature explosion (\Cref{sec:rank1}--\Cref{sec:curvature}).
+First, we establish the geometric structure of grokking: rank-1 weight trajectories on an invariant submanifold with orthogonal curvature explosion (\Cref{sec:rank1}--\Cref{sec:curvature}).
 Second, we demonstrate the predictive power and robustness of this structure: the defect spike as an early warning signal, regime invariance, and learning-rate phase diagrams (\Cref{sec:prediction}--\Cref{sec:lr_sweep}).
 Third, we test causality through targeted interventions (\Cref{sec:interventions}).
 
@@ -289,13 +290,14 @@ No-weight-decay controls ($\lambda = 0$) also show moderately high PC1\%, but th
 \end{figure}
 
 
-\subsection{The Execution Manifold is Effectively Integrable}
+\subsection{The Execution Manifold is Invariant Under the Dynamics}
 \label{sec:integrability}
 
-Having established that the weight trajectory lies on a low-dimensional submanifold, we ask: is this submanifold flat (integrable) with respect to the optimization dynamics?
+Having established that the weight trajectory lies on a low-dimensional submanifold, we ask: is this submanifold invariant under the optimization dynamics---does loss-landscape curvature deflect the trajectory out of its learned subspace, or is curvature confined to orthogonal directions?
 
 We compute commutator defects at regular checkpoints during training and project each commutator vector onto the PCA basis (\Cref{sec:projection}).
 The key result: the residual fraction $\rho = \norm{\delta_\perp}/\norm{\delta}$ is $\approx 1.000$ within numerical precision across all 36 conditions (6 operations $\times$ 2 weight-decay settings $\times$ 3 seeds), as shown in \Cref{fig:integrability}.
+Curvature is confined entirely to the normal bundle of the execution manifold; the submanifold is invariant under the optimization flow.
 We note that this near-unity value reflects the high dimensionality of parameter space ($P \approx 290$k) relative to the PCA subspace ($K = 16$--$24$); the exec/random ratio (\Cref{sec:random_control}) provides the complementary test that the small parallel component is geometrically meaningful.
 
 \begin{figure}[t]
@@ -303,29 +305,29 @@ We note that this near-unity value reflects the high dimensionality of parameter
     \begin{subfigure}[t]{0.48\textwidth}
         \centering
         \includegraphics[width=\textwidth]{figK_integrability.png}
-        \caption{Effective integrability: the residual fraction $\rho \approx 1.0$ at every checkpoint, meaning commutator vectors are predominantly orthogonal to the PCA manifold.}
+        \caption{Invariance measure: the residual fraction $\rho \approx 1.0$ at every checkpoint, meaning commutator vectors are predominantly orthogonal to the execution manifold.}
         \label{fig:integrability_single}
     \end{subfigure}
     \hfill
     \begin{subfigure}[t]{0.48\textwidth}
         \centering
         \includegraphics[width=\textwidth]{figS_multiseed_integrability.png}
-        \caption{Multi-seed replication: $\rho \approx 1.000$ within numerical precision across all 36 conditions.}
+        \caption{Multi-seed replication: $\rho \approx 1.000$ within numerical precision across all 36 conditions, confirming invariance.}
         \label{fig:integrability_multiseed}
     \end{subfigure}
-    \caption{The execution manifold is effectively integrable. Commutator defect vectors are predominantly orthogonal to the PCA subspace.}
+    \caption{The execution manifold is invariant under the optimization dynamics. Commutator defect vectors are predominantly orthogonal to the PCA subspace, with curvature confined to the normal bundle.}
     \label{fig:integrability}
 \end{figure}
 
 This means that the dominant component of loss-landscape curvature lies \emph{outside} the directions the model actually uses for learning.
-The weight trajectory evolves on an effectively flat submanifold, while curvature builds up predominantly in orthogonal directions that the optimizer does not traverse.
+The weight trajectory evolves on an invariant submanifold: despite enormous curvature in the ambient parameter space, the curvature is confined to orthogonal directions and does not deflect the optimization trajectory out of its learned subspace.
 
 \paragraph{Random subspace control.}
 To confirm that the near-zero projection onto the PCA basis reflects genuine geometry rather than a dimensionality artifact, we compare against random $K$-dimensional subspaces (\Cref{sec:random_control}).
 \Cref{fig:random_control} shows the projection fraction for the PCA (execution) basis and the random baseline over training.
 Across all four grokking operations, the execution basis captures $1.8$--$2.9\times$ more commutator energy than a random subspace of equal dimension ($K = 24$), confirming that the small parallel component is geometrically structured.
 We verify that this ratio is stable under variation of the PCA dimension $K$: reducing to $K = 16$ or increasing to $K = 32$ yields exec/random ratios within the same range, confirming that the result is not an artifact of the particular choice of $K$.
-Crucially, both projections are very small (proj/full $< 0.05$), consistent with the integrability measure $\rho \approx 1.000$: in a space of $\sim$290k dimensions, any $K$-dimensional subspace captures negligible energy from a generic vector.
+Crucially, both projections are very small (proj/full $< 0.05$), consistent with the invariance measure $\rho \approx 1.000$: in a space of $\sim$290k dimensions, any $K$-dimensional subspace captures negligible energy from a generic vector.
 The PCA subspace nonetheless captures a structured excess above the random floor, confirming that the near-unity $\rho$ reflects genuine geometric orthogonality rather than merely high dimensionality.
 
 \begin{figure}[t]
@@ -350,7 +352,7 @@ The PCA subspace nonetheless captures a structured excess above the random floor
 \subsection{Curvature Explodes Orthogonally During Grokking}
 \label{sec:curvature}
 
-While the execution manifold remains effectively flat, the \emph{magnitude} of curvature in orthogonal directions changes substantially during grokking.
+While the execution manifold remains invariant (curvature confined to the normal bundle), the \emph{magnitude} of curvature in orthogonal directions changes substantially during grokking.
 Operations that grok show 10--1000$\times$ higher commutator defect than non-grokking controls (\Cref{fig:defect_comparison}), and this curvature is concentrated predominantly outside the PCA manifold.
 
 \begin{figure}[t]
@@ -433,7 +435,7 @@ Layers & 2 & 3 \\
 Adam $\beta_2$ & 0.98 & 0.999 \\
 \midrule
 Grok step (add, mean) & $\sim$2,900 & $\sim$570,000 \\
-Eff.\ integrability ($\rho$) & $\approx 1.000$ & $\approx 1.000$ \\
+Invariance ($\rho$) & $\approx 1.000$ & $\approx 1.000$ \\
 Spike precedes grok? & 12/12 runs & 2/2 runs \\
 Lead time (absolute) & $\sim$1,100 steps & $\sim$558,000 steps \\
 Lead time (normalized) & $\sim$0.38 & $\sim$0.55 \\
@@ -442,7 +444,7 @@ Lead time (normalized) & $\sim$0.38 & $\sim$0.55 \\
 \end{table}
 
 \Cref{fig:slow_regime} shows the slow-regime results.
-Despite a $200\times$ difference in grokking timescale, $10\times$ difference in weight decay, and a different number of layers, the same qualitative transition is observed: the execution manifold is effectively integrable, and the defect spike precedes grokking by hundreds of thousands of steps.
+Despite a $200\times$ difference in grokking timescale, $10\times$ difference in weight decay, and a different number of layers, the same qualitative transition is observed: the execution manifold is invariant ($\rho \approx 1.000$), and the defect spike precedes grokking by hundreds of thousands of steps.
 However, the alignment dynamics differ quantitatively between regimes.
 In the fast regime, trajectory--curvature alignment is initially above the random baseline and decays toward the transition, consistent with underdamped exploration of parameter space.
 In the slow regime, alignment remains at or below the random baseline throughout, consistent with overdamped motion along narrow valleys.
@@ -453,7 +455,7 @@ Both regimes nonetheless exhibit a defect-mediated generalization transition.
     \begin{subfigure}[t]{0.48\textwidth}
         \centering
         \includegraphics[width=\textwidth]{figY_regime_comparison_commutator.png}
-        \caption{Regime comparison: integrability, defect, and normalized lead time are consistent across regimes.}
+        \caption{Regime comparison: invariance, defect, and normalized lead time are consistent across regimes.}
         \label{fig:regime_comparison}
     \end{subfigure}
     \hfill
@@ -674,7 +676,7 @@ While our experiments operate in a small-model regime ($\sim$290k parameters), t
 Recent empirical work has demonstrated that trained neural networks can tolerate substantial parameter quantization and compression with limited performance degradation.
 Our results provide a geometric perspective on this robustness in the grokking regime.
 
-Post-grokking solutions are characterized by reduced curvature anisotropy along the optimization trajectory: the commutator defect, while still nonzero, is concentrated orthogonally to the directions the optimizer traverses, and the effective integrability $\rho \approx 1.000$ (within numerical precision) indicates that the execution manifold is effectively flat at the measured resolution.
+Post-grokking solutions are characterized by reduced curvature anisotropy along the optimization trajectory: the commutator defect, while still nonzero, is concentrated orthogonally to the directions the optimizer traverses, and the invariance measure $\rho \approx 1.000$ (within numerical precision) indicates that curvature is confined to the normal bundle of the execution manifold.
 Such regions, where curvature is confined to directions not visited by the optimizer, naturally support greater robustness to perturbations along the learned subspace.
 In contrast, pre-grokking solutions reside in highly anisotropic, high-defect regions and are correspondingly more sensitive to perturbation.
 
@@ -693,7 +695,7 @@ From this viewpoint, grokking marks the transition from distributed representati
 \label{sec:disc_limitations}
 
 Our experiments are limited to relatively small Transformer models (2--3 layers, $\sim$290k parameters) and synthetic algorithmic tasks (modular arithmetic mod~97).
-While these settings permit fine-grained geometric analysis, it remains unclear to what extent the observed phenomena---rank-1 manifolds, integrable execution subspaces, predictive defect spikes---generalize to large-scale language models and real-world datasets.
+While these settings permit fine-grained geometric analysis, it remains unclear to what extent the observed phenomena---rank-1 manifolds, invariant execution submanifolds, predictive defect spikes---generalize to large-scale language models and real-world datasets.
 
 In addition, several of our diagnostic measures, including commutator defects (4 forward-backward passes per sample) and trajectory--curvature alignment, are computationally expensive and difficult to scale.
 Developing efficient approximations and proxies for these geometric diagnostics remains an important direction for future work.
@@ -737,7 +739,7 @@ The power-law scaling we observe in grok time vs.\ learning rate resonates with 
 \citet{li2018measuring} showed that neural network optimization occurs in a low-dimensional subspace.
 \citet{xu2026lowdim} demonstrated that attention weight trajectories during grokking in modular arithmetic lie on a low-dimensional execution manifold, with PC1 capturing the majority of variance.
 A corrected version of that work includes random-subspace baseline controls showing that the execution basis captures $2$--$10\times$ more commutator energy than a random subspace of equal dimension.
-The present work extends those findings by providing evidence for effective integrability of the manifold, adding analogous random baseline controls, demonstrating that curvature dynamics predict the generalization transition, and testing the causal role of orthogonal gradient flow through intervention experiments.
+The present work extends those findings by establishing that the execution manifold is invariant under the optimization dynamics (curvature confined to the normal bundle), adding analogous random baseline controls, demonstrating that curvature dynamics predict the generalization transition, and testing the causal role of orthogonal gradient flow through intervention experiments.
 
 
 % ══════════════════════════════════════════════════════════════════════════
@@ -745,10 +747,10 @@ The present work extends those findings by providing evidence for effective inte
 \label{sec:conclusion}
 % ══════════════════════════════════════════════════════════════════════════
 
-We have shown that the weight-space trajectory during grokking lies on a rank-1, effectively integrable submanifold of parameter space, and that the principal curvature directions are predominantly orthogonal to this manifold, with curvature explosion serving as a leading indicator of the generalization transition.
+We have shown that the weight-space trajectory during grokking lies on a rank-1 invariant submanifold of parameter space---the execution manifold---and that loss-landscape curvature is confined to the normal bundle of this submanifold, with curvature explosion serving as a leading indicator of the generalization transition.
 These findings hold across six modular arithmetic operations, three random seeds, two weight-decay settings, a $100\times$ learning rate sweep, and two qualitatively different hyperparameter regimes ($200\times$ range in training timescale).
 Causal intervention experiments further establish that orthogonal gradient flow is necessary but not sufficient for grokking, with a monotonic dose--response curve that replicates across four operations and is specific to the PCA-identified directions.
-The geometric picture---effectively flat trajectory, orthogonal curvature, predictive spike, and asymmetric causal role---provides a new lens for understanding the grokking phenomenon and suggests that monitoring gradient non-commutativity may be useful as an early warning signal for delayed generalization in neural networks.
+The geometric picture---invariant execution manifold, orthogonal curvature confinement, predictive spike, and asymmetric causal role---provides a new lens for understanding the grokking phenomenon and suggests that monitoring gradient non-commutativity may be useful as an early warning signal for delayed generalization in neural networks.
 
 \paragraph{Reproducibility.}
 All code and figures are available at \url{https://github.com/skydancerosel/grokking-integrability}.
@@ -806,7 +808,7 @@ Total compute for full reproduction is approximately 9 hours on a single Apple M
     \begin{subfigure}[t]{0.48\textwidth}
         \centering
         \includegraphics[width=\textwidth]{figM_defect_integrability.png}
-        \caption{Combined view: defect magnitude and integrability over training.}
+        \caption{Combined view: defect magnitude and invariance measure over training.}
         \label{fig:combined}
     \end{subfigure}
     \hfill
@@ -842,7 +844,7 @@ Total compute for full reproduction is approximately 9 hours on a single Apple M
 \begin{figure}[ht]
     \centering
     \includegraphics[width=0.7\textwidth]{figV_temporal_add_seeds.png}
-    \caption{Temporal traces for $(a+b) \bmod 97$ with 3 seed overlays, showing consistency of the integrability and defect patterns across seeds.}
+    \caption{Temporal traces for $(a+b) \bmod 97$ with 3 seed overlays, showing consistency of the invariance and defect patterns across seeds.}
     \label{fig:temporal_seeds}
 \end{figure}
 
