@@ -1,0 +1,127 @@
+\begin{thebibliography}{18}
+\providecommand{\natexlab}[1]{#1}
+\providecommand{\url}[1]{\texttt{#1}}
+\expandafter\ifx\csname urlstyle\endcsname\relax
+  \providecommand{\doi}[1]{doi: #1}\else
+  \providecommand{\doi}{doi: \begingroup \urlstyle{rm}\Url}\fi
+
+\bibitem[Amari(1998)]{amari1998natural}
+Shun-ichi Amari.
+\newblock Natural gradient works efficiently in learning.
+\newblock \emph{Neural Computation}, 10\penalty0 (2):\penalty0 251--276, 1998.
+
+\bibitem[Davies et~al.(2023)Davies, Langosco, and Krueger]{davies2023unifying}
+Xander Davies, Lauro Langosco, and David Krueger.
+\newblock Unifying grokking and double descent.
+\newblock \emph{arXiv preprint arXiv:2303.06173}, 2023.
+
+\bibitem[Draxler et~al.(2018)Draxler, Veschgini, Salmhofer, and
+  Hamprecht]{draxler2018essentially}
+Felix Draxler, Kambis Veschgini, Manfred Salmhofer, and Fred~A Hamprecht.
+\newblock Essentially no barriers in neural network energy landscape.
+\newblock In \emph{International Conference on Machine Learning}, pages
+  1309--1318, 2018.
+
+\bibitem[Fort and Jastrzebski(2019)]{fort2019large}
+Stanislav Fort and Stanislaw Jastrzebski.
+\newblock Large scale structure of neural network loss landscapes.
+\newblock In \emph{Advances in Neural Information Processing Systems},
+  volume~32, 2019.
+
+\bibitem[Garipov et~al.(2018)Garipov, Izmailov, Podoprikhin, Vetrov, and
+  Wilson]{garipov2018loss}
+Timur Garipov, Pavel Izmailov, Dmitrii Podoprikhin, Dmitry Vetrov, and
+  Andrew~Gordon Wilson.
+\newblock Loss surfaces, mode connectivity, and fast ensembling of {DNN}s.
+\newblock In \emph{Advances in Neural Information Processing Systems},
+  volume~31, 2018.
+
+\bibitem[Kaplan et~al.(2020)Kaplan, McCandlish, Henighan, Brown, Chess, Child,
+  Gray, Radford, Wu, and Amodei]{kaplan2020scaling}
+Jared Kaplan, Sam McCandlish, Tom Henighan, Tom~B Brown, Benjamin Chess, Rewon
+  Child, Scott Gray, Alec Radford, Jeffrey Wu, and Dario Amodei.
+\newblock Scaling laws for neural language models.
+\newblock \emph{arXiv preprint arXiv:2001.08361}, 2020.
+
+\bibitem[Kumar et~al.(2024)Kumar, Bordelon, Gershman, and
+  Pehlevan]{kumar2024grokking}
+Tanishq Kumar, Blake Bordelon, Samuel~J Gershman, and Cengiz Pehlevan.
+\newblock Grokking as the transition from lazy to rich training dynamics.
+\newblock \emph{arXiv preprint arXiv:2310.06110}, 2024.
+
+\bibitem[Li et~al.(2018{\natexlab{a}})Li, Farkhoor, Liu, and
+  Yosinski]{li2018measuring}
+Chunyuan Li, Heerad Farkhoor, Rosanne Liu, and Jason Yosinski.
+\newblock Measuring the intrinsic dimension of objective landscapes.
+\newblock In \emph{International Conference on Learning Representations},
+  2018{\natexlab{a}}.
+
+\bibitem[Li et~al.(2018{\natexlab{b}})Li, Xu, Taylor, Studer, and
+  Goldstein]{li2018visualizing}
+Hao Li, Zheng Xu, Gavin Taylor, Christoph Studer, and Tom Goldstein.
+\newblock Visualizing the loss landscape of neural nets.
+\newblock In \emph{Advances in Neural Information Processing Systems},
+  volume~31, 2018{\natexlab{b}}.
+
+\bibitem[Liu et~al.(2022)Liu, Kitouni, Nolte, Michaud, Tegmark, and
+  Williams]{liu2022omnigrok}
+Ziming Liu, Ouail Kitouni, Niklas Nolte, Eric~J Michaud, Max Tegmark, and Mike
+  Williams.
+\newblock Omnigrok: Grokking beyond algorithmic data.
+\newblock \emph{arXiv preprint arXiv:2210.01117}, 2022.
+
+\bibitem[Lyu et~al.(2024)Lyu, Jin, Li, Du, Lee, and Hu]{lyu2024dichotomy}
+Kaifeng Lyu, Jikai Jin, Zhiyuan Li, Simon~S Du, Jason~D Lee, and Wei Hu.
+\newblock Dichotomy of early and late phase implicit biases can provably induce
+  grokking.
+\newblock \emph{arXiv preprint arXiv:2311.18817}, 2024.
+
+\bibitem[Merrill et~al.(2023)Merrill, Tsilivis, and Shukla]{merrill2023tale}
+William Merrill, Nikolaos Tsilivis, and Aman Shukla.
+\newblock A tale of two circuits: Grokking as competition of sparse and dense
+  subnetworks.
+\newblock \emph{arXiv preprint arXiv:2303.11873}, 2023.
+
+\bibitem[Nanda et~al.(2023)Nanda, Chan, Liberum, Smith, and
+  Steinhardt]{nanda2023grokking}
+Neel Nanda, Lawrence Chan, Tom Liberum, Jess Smith, and Jacob Steinhardt.
+\newblock Progress measures for grokking via mechanistic interpretability.
+\newblock \emph{arXiv preprint arXiv:2301.05217}, 2023.
+
+\bibitem[Power et~al.(2022)Power, Burda, Edwards, Babuschkin, and
+  Misra]{power2022grokking}
+Alethea Power, Yuri Burda, Harri Edwards, Igor Babuschkin, and Vedant Misra.
+\newblock Grokking: Generalization beyond overfitting on small algorithmic
+  datasets.
+\newblock In \emph{ICLR 2022 Workshop on MATH-AI}, 2022.
+\newblock URL \url{https://arxiv.org/abs/2201.02177}.
+
+\bibitem[Thilak et~al.(2022)Thilak, Littwin, Zhai, Saremi, Paiss, and
+  Susskind]{thilak2022slingshot}
+Vimal Thilak, Etai Littwin, Shuangfei Zhai, Omid Saremi, Roni Paiss, and Joshua
+  Susskind.
+\newblock The slingshot mechanism: An empirical study of adaptive optimizers
+  and the grokking phenomenon.
+\newblock \emph{arXiv preprint arXiv:2206.04817}, 2022.
+
+\bibitem[Varma et~al.(2023)Varma, Shah, Kenton, Kram{\'a}r, and
+  Nanda]{varma2023explaining}
+Vikrant Varma, Rohin Shah, Zachary Kenton, J{\'a}nos Kram{\'a}r, and Neel
+  Nanda.
+\newblock Explaining grokking through circuit efficiency.
+\newblock \emph{arXiv preprint arXiv:2309.02390}, 2023.
+
+\bibitem[Xu(2026)]{xu2026lowdim}
+Yongzhong Xu.
+\newblock Low-dimensional execution manifolds in transformer learning dynamics:
+  Evidence from modular arithmetic tasks.
+\newblock \emph{arXiv preprint arXiv:2602.10496}, 2026.
+\newblock URL \url{https://arxiv.org/abs/2602.10496}.
+
+\bibitem[Zhong et~al.(2024)Zhong, Liu, Tegmark, and Andreas]{zhong2024clock}
+Ziqian Zhong, Ziming Liu, Max Tegmark, and Jacob Andreas.
+\newblock The clock and the pizza: Two stories in mechanistic explanation of
+  neural networks.
+\newblock \emph{Advances in Neural Information Processing Systems}, 36, 2024.
+
+\end{thebibliography}

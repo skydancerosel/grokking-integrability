@@ -33,6 +33,7 @@ from grok_commutator_analysis import (
 # ── config ───────────────────────────────────────────────────────────────
 OUT_DIR = Path(__file__).parent / "pca_sweep_plots"
 GROK_OPS = ["add", "sub", "mul", "x2_y2"]
+NOGROK_OPS = ["x2_xy_y2", "x3_xy"]   # non-grokking controls
 SEEDS = [42, 137, 2024]
 
 # Fine-grained: measure commutator every 100 steps during the grokking window
@@ -218,8 +219,16 @@ def main():
     device = get_device()
     print(f"Device: {device}")
 
-    # ── Run all grokking operations × seeds ───────────────────────────────
+    # ── Load cached results if available ──────────────────────────────────
+    cache_path = OUT_DIR / "generalization_dynamics_results.pt"
     all_runs = {}
+    if cache_path.exists():
+        cached = torch.load(cache_path, map_location="cpu", weights_only=False)
+        if "all_runs" in cached:
+            all_runs = cached["all_runs"]
+            print(f"  Loaded {len(all_runs)} cached runs from {cache_path.name}")
+
+    # ── Run all grokking operations × seeds ───────────────────────────────
     total_runs = len(GROK_OPS) * len(SEEDS)
     run_i = 0
 
@@ -227,10 +236,16 @@ def main():
         for seed in SEEDS:
             run_i += 1
             tag = f"{op_name}_wd1.0_s{seed}"
+            key = (op_name, seed)
+
+            if key in all_runs:
+                print(f"\n  [{run_i}/{total_runs}] {tag} — cached, skipping")
+                continue
+
             print(f"\n  [{run_i}/{total_runs}] {tag}")
 
             data = train_with_defect_tracking(op_name, 1.0, seed)
-            all_runs[(op_name, seed)] = data
+            all_runs[key] = data
 
             # Quick summary
             print(f"    → grokked={data['grokked']} "
@@ -240,13 +255,34 @@ def main():
     # ── Also run no-wd controls for add (1 seed, short) ──────────────────
     for op_name in ["add"]:
         for seed in SEEDS[:1]:   # 1 seed control is enough
+            key = (op_name + "_nowd", seed)
             tag = f"{op_name}_wd0.0_s{seed}"
-            print(f"\n  [ctrl] {tag}")
 
+            if key in all_runs:
+                print(f"\n  [ctrl] {tag} — cached, skipping")
+                continue
+
+            print(f"\n  [ctrl] {tag}")
             data = train_with_defect_tracking(op_name, 0.0, seed, max_steps=5_000)
-            all_runs[(op_name + "_nowd", seed)] = data
+            all_runs[key] = data
             print(f"    → grokked={data['grokked']}, "
                   f"{len(data['records'])} measurements")
+
+    # ── Non-grokking operations as controls (wd=1.0, 1 seed each) ──────
+    for op_name in NOGROK_OPS:
+        seed = SEEDS[0]
+        key = (op_name, seed)
+        tag = f"{op_name}_wd1.0_s{seed}"
+
+        if key in all_runs:
+            print(f"\n  [no-grok ctrl] {tag} — cached, skipping")
+            continue
+
+        print(f"\n  [no-grok ctrl] {tag}")
+        data = train_with_defect_tracking(op_name, 1.0, seed, max_steps=7_500)
+        all_runs[key] = data
+        print(f"    → grokked={data['grokked']}, "
+              f"{len(data['records'])} measurements")
 
     # ── Compute lead times ────────────────────────────────────────────────
     print(f"\n{'='*80}")
@@ -291,6 +327,13 @@ def main():
               f"median={np.median(lead_times_90):.0f}, "
               f"range=[{min(lead_times_90)}, {max(lead_times_90)}] steps")
 
+        # Sign test: all lead times positive => p = 2^{-n}
+        n_positive = sum(1 for l in lead_times_90 if l > 0)
+        n_total = len(lead_times_90)
+        p_sign = 2 ** (-n_total)  # under H0: spike equally likely before/after
+        print(f"\n  Sign test: {n_positive}/{n_total} positive lead times, "
+              f"p = 2^{{-{n_total}}} = {p_sign:.6f}")
+
     # ══════════════════════════════════════════════════════════════════════
     # Figure W: Defect vs Test Accuracy — 2×2 panel (one per op)
     # ══════════════════════════════════════════════════════════════════════
@@ -298,16 +341,21 @@ def main():
 
     OP_LABELS = {
         "add": "(a+b)", "sub": "(a−b)", "mul": "(a×b)", "x2_y2": "(a²+b²)",
+        "x2_xy_y2": "(a²+ab+b²)", "x3_xy": "(a³+ab)",
     }
     SEED_COLORS = {42: "#1f77b4", 137: "#ff7f0e", 2024: "#2ca02c"}
 
-    fig, axes = plt.subplots(2, 2, figsize=(14, 10))
+    ALL_PANEL_OPS = GROK_OPS + NOGROK_OPS   # 4 grokking + 2 non-grokking = 6 panels
+    fig, axes = plt.subplots(3, 2, figsize=(14, 15))
 
-    for idx, op_name in enumerate(GROK_OPS):
+    for idx, op_name in enumerate(ALL_PANEL_OPS):
         ax = axes[idx // 2, idx % 2]
         ax2 = ax.twinx()
 
-        for seed in SEEDS:
+        is_nogrok = (op_name in NOGROK_OPS)
+        seeds_to_plot = [SEEDS[0]] if is_nogrok else SEEDS
+
+        for seed in seeds_to_plot:
             key = (op_name, seed)
             if key not in all_runs:
                 continue
@@ -328,26 +376,30 @@ def main():
                      linestyle="--", alpha=0.6,
                      label=f"test acc s={seed}" if idx == 0 else "")
 
-            # Mark spike step
-            spike = find_spike_step(recs)
-            if spike is not None:
-                ax.axvline(x=spike, color=color, linestyle=":", alpha=0.4, linewidth=1)
+            # Mark spike step (only for grokking ops)
+            if not is_nogrok:
+                spike = find_spike_step(recs)
+                if spike is not None:
+                    ax.axvline(x=spike, color=color, linestyle=":", alpha=0.4, linewidth=1)
 
-        # Mark grokking region
-        grok_steps = [all_runs[(op_name, s)]["grok_step"]
-                      for s in SEEDS if (op_name, s) in all_runs
-                      and all_runs[(op_name, s)]["grok_step"] is not None]
-        if grok_steps:
-            grok_mean = np.mean(grok_steps)
-            ax.axvspan(min(grok_steps) - 100, max(grok_steps) + 100,
-                       alpha=0.1, color="green", label="grok region")
+        # Mark grokking region (only for grokking ops)
+        if not is_nogrok:
+            grok_steps = [all_runs[(op_name, s)]["grok_step"]
+                          for s in SEEDS if (op_name, s) in all_runs
+                          and all_runs[(op_name, s)]["grok_step"] is not None]
+            if grok_steps:
+                ax.axvspan(min(grok_steps) - 100, max(grok_steps) + 100,
+                           alpha=0.1, color="green", label="grok region")
 
         ax.set_yscale("log")
         ax.set_ylabel("Commutator defect (median)", fontsize=10, color="#333")
         ax2.set_ylabel("Test accuracy", fontsize=10, color="#666")
         ax2.set_ylim(-0.05, 1.1)
         ax.set_xlabel("Training step")
-        ax.set_title(f"{OP_LABELS[op_name]} mod 97  (wd=1.0)", fontsize=12)
+
+        grok_tag = "DOES NOT GROK" if is_nogrok else "wd=1.0"
+        ax.set_title(f"{OP_LABELS[op_name]} mod 97  ({grok_tag})", fontsize=12,
+                     color="#999" if is_nogrok else "black")
         ax.grid(alpha=0.2)
 
     # Global legend
@@ -363,10 +415,10 @@ def main():
     handles.append(Patch(facecolor="green", alpha=0.2, label="Grok region"))
 
     fig.legend(handles=handles, loc="lower center", ncol=4, fontsize=10,
-               bbox_to_anchor=(0.5, -0.02))
+               bbox_to_anchor=(0.5, -0.01))
     fig.suptitle("Commutator Defect Predicts Grokking\n"
-                 "(defect spike precedes test accuracy rise, 3 seeds)",
-                 fontsize=14, y=1.02)
+                 "(top 4: grokking ops, bottom 2: non-grokking controls)",
+                 fontsize=14, y=1.01)
     fig.tight_layout()
     fig.savefig(OUT_DIR / "figW_defect_predicts_grokking.png",
                 dpi=150, bbox_inches="tight")
@@ -467,6 +519,19 @@ def main():
         for j, lead in enumerate(op_leads[op_name]):
             ax.scatter(i + (j - 1) * 0.1, lead, color="black",
                       s=30, zorder=5, alpha=0.7)
+
+    # Sign test annotation
+    all_leads_90 = [l for op in GROK_OPS for l in op_leads[op]]
+    if all_leads_90:
+        n_pos = sum(1 for l in all_leads_90 if l > 0)
+        n_tot = len(all_leads_90)
+        p_val = 2 ** (-n_tot)
+        ax.text(0.98, 0.95,
+                f"Sign test: {n_pos}/{n_tot} positive\n"
+                f"p = 2$^{{-{n_tot}}}$ = {p_val:.1e}",
+                transform=ax.transAxes, ha="right", va="top",
+                fontsize=9, bbox=dict(boxstyle="round,pad=0.3",
+                                      facecolor="lightyellow", edgecolor="gray"))
 
     fig.suptitle("Commutator Defect as Early Warning Signal for Grokking",
                  fontsize=14, y=1.02)
