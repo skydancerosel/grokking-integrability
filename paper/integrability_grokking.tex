@@ -679,7 +679,10 @@ The learning rate controls the damping: low $\eta$ produces overdamped dynamics 
 While this interpretation is supported by the temporal ordering (curvature precedes generalization) and the causal necessity of orthogonal gradient flow (\Cref{sec:interventions}), the available geometric signals---commutator defect, trajectory--curvature alignment, and invariance measure---do not combine into a \emph{predictive} composite diagnostic that discriminates grokking from non-grokking operations in advance.
 The invariance measure is identically~1 across all conditions; trajectory--curvature alignment is noisy and overlapping; and defect magnitude only separates grokking from non-grokking operations retrospectively.
 Moreover, the same grokking operations trained \emph{without} weight decay exhibit comparable defect acceleration without generalizing, confirming that curvature growth alone is insufficient---regularization pressure is the additional ingredient.
-A complete dynamical-systems theory of grokking would need to formalize the interaction between curvature accumulation and the regularization-induced drift toward the generalizing basin.
+This suggests a fundamental limitation: the grokking transition may be \emph{locally unpredictable} from curvature measurements alone.
+Local geometric diagnostics can detect that the system is approaching a bifurcation---the loss landscape is reorganizing, transverse instability is growing---but whether the bifurcation leads to generalization depends on a \emph{global} property of the landscape (the existence of a low-norm generalizing basin) interacting with \emph{exogenous} pressure (weight decay).
+No purely local measurement can determine whether such a basin exists on the other side of the curvature barrier.
+A complete dynamical-systems theory of grokking would therefore need to characterize not only the local curvature accumulation but also the global topology of the loss landscape that determines which transitions lead to generalization.
 
 \subsection{Implicit Regularization and Low-Dimensional Structure}
 \label{sec:disc_regularization}
