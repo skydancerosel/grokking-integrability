@@ -1,6 +1,6 @@
 # Emergent Low-Dimensional Invariant Submanifolds in Grokking Dynamics
 
-We identify an emergent low-dimensional **invariant submanifold**---the *execution manifold*---in the weight space of transformers trained on modular arithmetic. Loss-landscape curvature is confined to the **normal bundle** of this submanifold, curvature explosion serves as a **leading indicator** of the generalization transition, and **causal interventions** confirm orthogonal gradient flow is necessary for grokking.
+We identify an emergent low-dimensional **invariant submanifold**---the *execution manifold*---in the weight space of transformers trained on modular arithmetic. Loss-landscape curvature is confined to the **normal bundle** of this submanifold, curvature growth in the normal bundle consistently **precedes generalization**, and **causal interventions** confirm orthogonal gradient flow is necessary for grokking.
 
 **Paper**: [`paper/integrability_grokking.tex`](paper/integrability_grokking.tex) &nbsp;|&nbsp; **arXiv**: [2602.10496](https://arxiv.org/abs/2602.10496) (earlier version)
 
@@ -12,7 +12,7 @@ We identify an emergent low-dimensional **invariant submanifold**---the *executi
 
 3. **Curvature explodes orthogonally during grokking.** Operations that grok show 10--1000x higher commutator defect than non-grokking controls, concentrated outside the execution manifold.
 
-4. **Defect spike predicts grokking.** The commutator defect spike precedes the generalization transition by 600--1600 training steps across all 12 grokking runs (4 operations x 3 seeds), with 100% consistency (sign test p = 2^{-12} < 0.001).
+4. **Curvature growth precedes generalization.** The onset of commutator defect growth precedes the generalization transition by 600--1600 training steps across all 12 grokking runs (4 operations x 3 seeds), with 100% consistency (sign test p = 2^{-12} < 0.001). Non-grokking operations also show moderate defect growth (30--50x baseline) without generalizing, so onset is a necessary precondition rather than a sufficient predictor. Causal interventions confirm the mechanistic link.
 
 5. **Regime-invariant.** All results replicate across a 100x learning rate sweep ({1e-4, 1e-3, 1e-2}), a qualitatively different slow regime (lr=5e-5, wd=0.1, 3 layers, ~200x timescale difference), and three random seeds.
 
@@ -69,7 +69,7 @@ All experiments use the canonical grokking setup from [Power et al. (2022)](http
 | 5 | `grok_commutator_analysis.py` | Forward commutator: project defect onto PCA manifold | figJ--figN |
 | 6 | `grok_converse_commutator.py` | Converse: project weight trajectory onto commutator subspace | figO--figR |
 | 7 | `grok_multiseed_commutator.py` | Multi-seed replication (3 seeds x 6 ops x 2 wd = 36 runs) | figS--figV |
-| 8 | `grok_generalization_dynamics.py` | Temporal: defect spike vs generalization transition timing | figW, figW2, figX |
+| 8 | `grok_generalization_dynamics.py` | Temporal: defect onset vs generalization transition timing | figW, figW2, figX |
 | 9 | `grok_slow_regime_commutator.py` | Slow regime (lr=5e-5, wd=0.1, 3L): invariance + defect timing | figY, figZ |
 | 10 | `grok_lr_sweep.py` | LR sweep phase diagram across {1e-4, 1e-3, 1e-2} | figPD, figPD2 |
 | 11 | `grok_lr_alignment.py` | Trajectory-curvature alignment across LRs + phase portrait | figPD3, figPD4 |

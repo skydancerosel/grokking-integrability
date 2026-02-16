@@ -45,7 +45,7 @@ Using PCA on attention weight trajectories and commutator defect analysis across
 We then measure loss-landscape curvature via commutator defects---the non-commutativity of successive gradient steps---and project these onto the learned submanifold.
 The commutator vectors are predominantly orthogonal to the execution manifold, even relative to random baselines (exec/random ratio $\approx 2$--$3\times$), indicating that the submanifold is \emph{invariant} under the optimization dynamics: curvature does not deflect the trajectory out of its learned subspace.
 Yet curvature explodes orthogonally: grokking operations show $10$--$1000\times$ higher commutator defect than non-grokking controls, concentrated entirely in the normal bundle of the execution manifold.
-This curvature spike consistently \emph{precedes} the generalization transition by 600--1600 training steps (sign test $p = 2^{-12} < 0.001$), providing a leading indicator of grokking.
+The onset of this curvature growth consistently \emph{precedes} the generalization transition by 600--1600 training steps (sign test $p = 2^{-12} < 0.001$), though non-grokking operations also exhibit moderate curvature growth ($30$--$50\times$) without generalizing, so onset is necessary but not sufficient.
 All findings replicate across a $100\times$ learning rate sweep, a qualitatively different slow regime ($\mathrm{lr}=5\!\times\!10^{-5}$, $\mathrm{wd}=0.1$, 3 layers), and three random seeds, though alignment dynamics differ quantitatively between regimes.
 Causal intervention experiments establish that orthogonal gradient flow is necessary but not sufficient for grokking: suppressing it prevents generalization with a monotonic dose--response across four operations, while artificially boosting curvature defects has no effect.
 
@@ -79,7 +79,7 @@ Our work makes five main contributions, spanning observation, prediction, and ca
 \begin{enumerate}
     \item \textbf{Rank-1 manifold}: The weight-space trajectory during grokking lies on a rank-1 submanifold (70--94\% of variance in PC1).
     \item \textbf{Invariant submanifold}: This submanifold is invariant under the optimization dynamics: commutator defects are predominantly orthogonal to it ($\rho \approx 1.000$ within numerical precision across 36 conditions, with exec/random projection ratio $\approx 2$--$3\times$), meaning curvature does not deflect the trajectory out of its learned subspace.
-    \item \textbf{Predictive curvature}: Curvature explodes orthogonally during grokking ($10$--$1000\times$ increase) and the spike \emph{precedes} generalization by 600--1600 steps, serving as a leading indicator.
+    \item \textbf{Temporal ordering}: Curvature explodes orthogonally during grokking ($10$--$1000\times$ increase) and its onset consistently \emph{precedes} generalization by 600--1600 steps. Non-grokking operations show moderate curvature growth ($30$--$50\times$) without generalization, so onset is necessary but not sufficient.
     \item \textbf{Causal interventions}: Suppressing orthogonal gradient flow prevents grokking (necessary) while boosting curvature defects has no effect (not sufficient), establishing an asymmetric causal relationship.
     \item \textbf{Robustness}: All results replicate across a $100\times$ learning rate sweep, a $200\times$ timescale difference between regimes, four operations, and three seeds.
 \end{enumerate}
@@ -240,7 +240,7 @@ If $\bar{c}_t$ is near this baseline, the trajectory is not aligned with curvatu
 
 We present our findings in three stages.
 First, we establish the geometric structure of grokking: rank-1 weight trajectories on an invariant submanifold with orthogonal curvature explosion (\Cref{sec:rank1}--\Cref{sec:curvature}).
-Second, we demonstrate the predictive power and robustness of this structure: the defect spike as an early warning signal, regime invariance, and learning-rate phase diagrams (\Cref{sec:prediction}--\Cref{sec:lr_sweep}).
+Second, we characterize the temporal relationship between curvature growth and generalization, and demonstrate robustness across regimes and learning rates (\Cref{sec:prediction}--\Cref{sec:lr_sweep}).
 Third, we test causality through targeted interventions (\Cref{sec:interventions}).
 
 \subsection{Weight Evolution is Rank-1}
@@ -377,41 +377,47 @@ Operations that grok show 10--1000$\times$ higher commutator defect than non-gro
 The converse analysis confirms that the weight trajectory does not align with curvature directions: the mean absolute cosine similarity between trajectory steps and commutator vectors is indistinguishable from the random-vector baseline ($\bar{c} \approx \sqrt{2/(\pi P)}$), meaning the trajectory actively avoids high-curvature directions.
 
 
-\subsection{Defect Spike Predicts Grokking}
+\subsection{Curvature Growth Precedes Generalization}
 \label{sec:prediction}
 
-A key finding is that the commutator defect spike consistently \emph{precedes} the generalization transition.
-\Cref{fig:prediction} shows the temporal overlay of commutator defect and test accuracy for all four grokking operations.
-In every case, defect begins rising before test accuracy increases.
+A key finding is that the onset of commutator defect growth consistently \emph{precedes} the generalization transition.
+We define the \textbf{defect onset} as the first training step at which the commutator defect exceeds $10\times$ its early-training baseline (median of the first 3 measurements) and an absolute threshold of~20.
+\Cref{fig:prediction} shows the temporal overlay of commutator defect and test accuracy for all four grokking operations and two non-grokking controls.
+In every grokking run, defect begins rising before test accuracy increases.
 
 \begin{figure}[t]
     \centering
     \includegraphics[width=\textwidth]{figW_defect_predicts_grokking.png}
-    \caption{Commutator defect predicts grokking. Top four panels: grokking operations (3 seeds each), showing defect spike (solid) preceding test accuracy rise (dashed). Bottom two panels: non-grokking controls show moderate defect but no generalization. Dotted vertical lines mark spike detection; green regions mark grokking.}
+    \caption{Temporal ordering of curvature growth and generalization. Top four panels: grokking operations (3 seeds each), showing defect (solid) rising before test accuracy (dashed). Bottom two panels: non-grokking controls show moderate defect growth ($30$--$50\times$ baseline) but no generalization. Dotted vertical lines mark defect onset; green regions mark grokking.}
     \label{fig:prediction}
 \end{figure}
 
-Across all 12 grokking runs (4 operations $\times$ 3 seeds), the defect spike precedes the point at which test accuracy reaches 90\% by 600--1600 steps, with mean lead time of 1117 steps (\Cref{fig:lead_time}).
+Across all 12 grokking runs (4 operations $\times$ 3 seeds), defect onset precedes the point at which test accuracy reaches 90\% by 600--1600 steps, with mean lead time of 1117 steps (\Cref{fig:lead_time}).
 A one-sided sign test gives $p = 2^{-12} \approx 2.4 \times 10^{-4}$, confirming that the temporal ordering is statistically significant.
 
-Non-grokking operations ($a^2 + ab + b^2$ and $a^3 + ab$) show moderate, slowly-growing defect but no sudden spike and no generalization, providing a negative control.
+\paragraph{Necessary but not sufficient.}
+Non-grokking operations ($a^2 + ab + b^2$ and $a^3 + ab$) also exhibit defect growth---reaching $30$--$50\times$ their early-training baseline---but never generalize.
+Grokking operations, by contrast, reach $500$--$2000\times$ baseline, with zero overlap between the two groups in total growth magnitude (minimum grokking: $513\times$; maximum non-grokking: $47\times$).
+However, this separation is only apparent retrospectively: at early training steps when grokking has not yet occurred, the defect trajectories of grokking and non-grokking operations overlap.
+Defect onset is therefore best understood as a \emph{necessary precondition} for grokking---a signal that the loss landscape is reorganizing---rather than a sufficient predictor that discriminates which operations will generalize.
+The causal intervention experiments (\Cref{sec:interventions}) confirm this interpretation: suppressing orthogonal gradient flow prevents grokking, establishing the mechanistic necessity of curvature growth.
 
 \begin{figure}[t]
     \centering
     \begin{subfigure}[t]{0.48\textwidth}
         \centering
         \includegraphics[width=\textwidth]{figW2_hero_defect_predicts_grok.png}
-        \caption{Hero example: $(a-b) \bmod 97$, seed 137. Defect spike at step 2000, grokking at step 3600 (lead = 1600 steps).}
+        \caption{Hero example: $(a-b) \bmod 97$, seed 137. Defect onset at step 2000, grokking at step 3600 (lead = 1600 steps).}
         \label{fig:hero_defect_predicts}
     \end{subfigure}
     \hfill
     \begin{subfigure}[t]{0.48\textwidth}
         \centering
         \includegraphics[width=\textwidth]{figX_defect_lead_time.png}
-        \caption{Lead time quantification. Left: spike step vs.\ grok step (all points above diagonal). Right: lead time by operation (sign test $p < 0.001$).}
+        \caption{Lead time quantification. Left: onset step vs.\ grok step (all points above diagonal). Right: lead time by operation (sign test $p < 0.001$).}
         \label{fig:lead_time}
     \end{subfigure}
-    \caption{Defect spike as early warning signal for grokking.}
+    \caption{Temporal ordering: curvature growth precedes generalization.}
     \label{fig:prediction_detail}
 \end{figure}
 
@@ -436,7 +442,7 @@ Adam $\beta_2$ & 0.98 & 0.999 \\
 \midrule
 Grok step (add, mean) & $\sim$2,900 & $\sim$570,000 \\
 Invariance ($\rho$) & $\approx 1.000$ & $\approx 1.000$ \\
-Spike precedes grok? & 12/12 runs & 2/2 runs \\
+Onset precedes grok? & 12/12 runs & 2/2 runs \\
 Lead time (absolute) & $\sim$1,100 steps & $\sim$558,000 steps \\
 Lead time (normalized) & $\sim$0.38 & $\sim$0.55 \\
 \bottomrule
@@ -444,7 +450,7 @@ Lead time (normalized) & $\sim$0.38 & $\sim$0.55 \\
 \end{table}
 
 \Cref{fig:slow_regime} shows the slow-regime results.
-Despite a $200\times$ difference in grokking timescale, $10\times$ difference in weight decay, and a different number of layers, the same qualitative transition is observed: the execution manifold is invariant ($\rho \approx 1.000$), and the defect spike precedes grokking by hundreds of thousands of steps.
+Despite a $200\times$ difference in grokking timescale, $10\times$ difference in weight decay, and a different number of layers, the same qualitative transition is observed: the execution manifold is invariant ($\rho \approx 1.000$), and defect onset precedes grokking by hundreds of thousands of steps.
 However, the alignment dynamics differ quantitatively between regimes.
 In the fast regime, trajectory--curvature alignment is initially above the random baseline and decays toward the transition, consistent with underdamped exploration of parameter space.
 In the slow regime, alignment remains at or below the random baseline throughout, consistent with overdamped motion along narrow valleys.
@@ -462,7 +468,7 @@ Both regimes nonetheless exhibit a defect-mediated generalization transition.
     \begin{subfigure}[t]{0.48\textwidth}
         \centering
         \includegraphics[width=\textwidth]{figZ_slow_regime_hero.png}
-        \caption{Slow regime hero: defect spike at $\sim$185k, grokking at $\sim$585k (lead $\approx$ 400k steps).}
+        \caption{Slow regime hero: defect onset at $\sim$185k, grokking at $\sim$585k (lead $\approx$ 400k steps).}
         \label{fig:slow_hero}
     \end{subfigure}
     \caption{Regime invariance: qualitative findings replicate in the slow regime ($200\times$ longer training), though alignment dynamics differ quantitatively.}
@@ -484,7 +490,7 @@ The defect landscape reveals a striking asymmetry (\Cref{fig:lr_phase}C): at low
 This suggests that slower optimization allows curvature to accumulate more in the orthogonal bundle before the phase transition occurs.
 
 The predictive lead time (\Cref{fig:lr_phase}D) is largest at $\eta = 10^{-4}$ ($\sim$23--33k steps) and moderate at $\eta = 10^{-3}$ ($\sim$700--1400 steps).
-At $\eta = 10^{-2}$, grokking occurs so rapidly ($<$1k steps) that the memorization and generalization phases overlap, and the defect spike is concurrent with rather than predictive of grokking.
+At $\eta = 10^{-2}$, grokking occurs so rapidly ($<$1k steps) that the memorization and generalization phases overlap, and defect onset is concurrent with rather than predictive of grokking.
 \Cref{fig:lr_hero} illustrates these three regimes for the addition operation.
 
 \begin{figure}[t]
@@ -494,19 +500,19 @@ At $\eta = 10^{-2}$, grokking occurs so rapidly ($<$1k steps) that the memorizat
     (A)~Grok fraction: the phase boundary between grokking and non-grokking operations is invariant to learning rate.
     (B)~Mean grok step (log scale): grokking speed scales with $\eta$.
     (C)~Mean max defect (log scale): curvature explosion is largest at low $\eta$.
-    (D)~Mean lead time (spike step $-$ grok step): the defect spike is most predictive at low $\eta$.}
+    (D)~Mean lead time (onset step $-$ grok step): defect onset is most predictive at low $\eta$.}
     \label{fig:lr_phase}
 \end{figure}
 
 \begin{figure}[t]
     \centering
     \includegraphics[width=\textwidth]{figPD2_lr_sweep_hero.png}
-    \caption{Defect and test accuracy trajectories for addition across three learning rates. At $\eta = 10^{-4}$ (blue), the defect spike precedes grokking by $\sim$33k steps; at $\eta = 10^{-3}$ (orange), by $\sim$1.4k steps; at $\eta = 10^{-2}$ (green), grokking is nearly instantaneous.}
+    \caption{Defect and test accuracy trajectories for addition across three learning rates. At $\eta = 10^{-4}$ (blue), defect onset precedes grokking by $\sim$33k steps; at $\eta = 10^{-3}$ (orange), by $\sim$1.4k steps; at $\eta = 10^{-2}$ (green), grokking is nearly instantaneous.}
     \label{fig:lr_hero}
 \end{figure}
 
 \paragraph{LR-dependent alignment dynamics.}
-To directly test whether the damping regime varies with learning rate, we measure trajectory--curvature alignment (mean $|\cos(\Delta\theta, \delta)|$, \Cref{sec:converse}) at four strategic checkpoints---memorization, defect spike, and post-grok---for each of the three learning rates on two operations (\Cref{fig:lr_alignment}).
+To directly test whether the damping regime varies with learning rate, we measure trajectory--curvature alignment (mean $|\cos(\Delta\theta, \delta)|$, \Cref{sec:converse}) at four strategic checkpoints---memorization, defect onset, and post-grok---for each of the three learning rates on two operations (\Cref{fig:lr_alignment}).
 At $\eta = 10^{-4}$, alignment remains below the random baseline ($0.18$--$0.86\times$) throughout, consistent with overdamped dynamics where the trajectory is confined to narrow valleys far from curvature directions.
 At $\eta = 10^{-2}$, alignment is consistently \emph{above} the baseline ($1.4$--$1.8\times$), indicating underdamped exploration that initially samples curvature directions.
 At $\eta = 10^{-3}$, the intermediate regime, alignment starts below baseline and rises toward or above it at the grokking transition.
@@ -524,7 +530,7 @@ This LR-dependent pattern replicates across both operations and provides direct 
 \end{figure}
 
 To integrate curvature accumulation and trajectory geometry into a unified picture, we construct a reduced phase portrait using the commutator defect and the trajectory--curvature alignment as coordinates (\Cref{fig:alignment_vs_defect}).
-Each training run traces a characteristic path through this space, progressing from memorization to the defect spike and finally to the post-grokking regime.
+Each training run traces a characteristic path through this space, progressing from memorization through defect onset to the post-grokking regime.
 
 We observe three qualitatively distinct dynamical regimes controlled by the learning rate.
 At high learning rates, training remains in an underdamped regime, exhibiting strong alignment with curvature directions and low defect accumulation.
@@ -540,7 +546,7 @@ To our knowledge, this is the first identification of distinct overdamped, criti
     \includegraphics[width=0.85\textwidth]{figPD4_alignment_vs_defect.png}
     \caption{Phase portrait of grokking dynamics in curvature--trajectory space.
     We plot the trajectory--curvature alignment ratio (mean\,$|\!\cos(\Delta\theta,\delta)\!|$ normalized by random baseline) against the commutator defect magnitude for three learning rates ($\eta = 10^{-4}, 10^{-3}, 10^{-2}$).
-    Each polyline traces the evolution from memorization (\textsc{mem}) through the defect spike (\textsc{spike}) to the post-grokking regime (\textsc{post}), shown for addition (circles) and multiplication (squares); arrows indicate the direction of training.
+    Each polyline traces the evolution from memorization (\textsc{mem}) through defect onset (\textsc{spike}) to the post-grokking regime (\textsc{post}), shown for addition (circles) and multiplication (squares); arrows indicate the direction of training.
     The horizontal dashed line indicates isotropic alignment.
     Training at high learning rates remains in an underdamped regime characterized by strong alignment and low defect, while low learning rates produce overdamped dynamics with large defect accumulation and weak alignment.
     Intermediate learning rates interpolate between these regimes.
@@ -695,7 +701,7 @@ From this viewpoint, grokking marks the transition from distributed representati
 \label{sec:disc_limitations}
 
 Our experiments are limited to relatively small Transformer models (2--3 layers, $\sim$290k parameters) and synthetic algorithmic tasks (modular arithmetic mod~97).
-While these settings permit fine-grained geometric analysis, it remains unclear to what extent the observed phenomena---rank-1 manifolds, invariant execution submanifolds, predictive defect spikes---generalize to large-scale language models and real-world datasets.
+While these settings permit fine-grained geometric analysis, it remains unclear to what extent the observed phenomena---rank-1 manifolds, invariant execution submanifolds, predictive defect onset---generalize to large-scale language models and real-world datasets.
 
 In addition, several of our diagnostic measures, including commutator defects (4 forward-backward passes per sample) and trajectory--curvature alignment, are computationally expensive and difficult to scale.
 Developing efficient approximations and proxies for these geometric diagnostics remains an important direction for future work.
@@ -747,10 +753,11 @@ The present work extends those findings by establishing that the execution manif
 \label{sec:conclusion}
 % ══════════════════════════════════════════════════════════════════════════
 
-We have shown that the weight-space trajectory during grokking lies on a rank-1 invariant submanifold of parameter space---the execution manifold---and that loss-landscape curvature is confined to the normal bundle of this submanifold, with curvature explosion serving as a leading indicator of the generalization transition.
+We have shown that the weight-space trajectory during grokking lies on a rank-1 invariant submanifold of parameter space---the execution manifold---and that loss-landscape curvature is confined to the normal bundle of this submanifold.
+Curvature growth in the normal bundle consistently precedes generalization by 600--1600 steps, establishing a robust temporal ordering; however, non-grokking operations also exhibit moderate curvature growth without generalizing, so onset is a necessary precondition rather than a sufficient predictor.
 These findings hold across six modular arithmetic operations, three random seeds, two weight-decay settings, a $100\times$ learning rate sweep, and two qualitatively different hyperparameter regimes ($200\times$ range in training timescale).
-Causal intervention experiments further establish that orthogonal gradient flow is necessary but not sufficient for grokking, with a monotonic dose--response curve that replicates across four operations and is specific to the PCA-identified directions.
-The geometric picture---invariant execution manifold, orthogonal curvature confinement, predictive spike, and asymmetric causal role---provides a new lens for understanding the grokking phenomenon and suggests that monitoring gradient non-commutativity may be useful as an early warning signal for delayed generalization in neural networks.
+Causal intervention experiments close the loop: suppressing orthogonal gradient flow prevents grokking with a monotonic dose--response across four operations, while artificially boosting curvature defects has no effect, establishing that normal-bundle curvature growth is mechanistically necessary for the generalization transition.
+The geometric picture---invariant execution manifold, orthogonal curvature confinement, necessary-but-not-sufficient temporal ordering, and causal confirmation via interventions---provides a new lens for understanding the grokking phenomenon and suggests that monitoring gradient non-commutativity during training may serve as a diagnostic for ongoing loss-landscape reorganization, even when generalization is not yet observable in accuracy metrics.
 
 \paragraph{Reproducibility.}
 All code and figures are available at \url{https://github.com/skydancerosel/grokking-integrability}.
