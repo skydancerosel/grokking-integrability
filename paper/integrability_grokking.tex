@@ -659,6 +659,28 @@ Across tasks and hyperparameter regimes, we observe that memorization confines t
 This is reminiscent of metastable escape in stochastic dynamical systems, where the defect magnitude functions as accumulated geometric tension and the learning rate controls damping.
 Lower learning rates produce overdamped trajectories requiring substantial defect buildup ($\sim$30k steps at $\eta = 10^{-4}$), while higher learning rates facilitate rapid transitions ($\sim$1k steps at $\eta = 10^{-2}$; \Cref{sec:lr_sweep}).
 
+\subsection{A Dynamical-Systems Interpretation}
+\label{sec:disc_dynamical}
+
+\emph{Thesis: grokking follows the classical dynamical-systems pattern of slow-manifold formation, transverse instability, and escape.}
+
+Our findings admit a natural interpretation in the language of dynamical systems, proceeding through four phases:
+\begin{enumerate}
+    \item \textbf{Compression.} Early training collapses the weight trajectory onto a low-dimensional slow manifold (PC1 captures 70--94\% of variance; \Cref{sec:rank1}). The optimizer finds a rank-1 subspace and confines subsequent motion to it.
+    \item \textbf{Transverse instability.} Curvature accumulates in the normal bundle of this manifold ($10$--$1000\times$ defect growth; \Cref{sec:curvature}), while the trajectory remains invariant ($\rho \approx 1.000$; \Cref{sec:invariant}). The system becomes increasingly sensitive to off-manifold perturbations.
+    \item \textbf{Critical transition.} Weight decay provides a sustained pressure toward lower-norm solutions. Combined with the accumulated transverse curvature, this drives the trajectory through a bifurcation into the generalizing basin.
+    \item \textbf{Reorganization.} The trajectory settles into a new regime characterized by lower curvature anisotropy along the optimization path---the post-grokking solution.
+\end{enumerate}
+
+This parallels the classical scenario of slow-manifold collapse followed by transverse bifurcation in dissipative dynamical systems.
+The learning rate controls the damping: low $\eta$ produces overdamped dynamics with gradual defect buildup, high $\eta$ produces underdamped dynamics with rapid transitions (\Cref{sec:lr_sweep}).
+
+\paragraph{Limitations of the dynamical-systems analogy.}
+While this interpretation is supported by the temporal ordering (curvature precedes generalization) and the causal necessity of orthogonal gradient flow (\Cref{sec:interventions}), the available geometric signals---commutator defect, trajectory--curvature alignment, and invariance measure---do not combine into a \emph{predictive} composite diagnostic that discriminates grokking from non-grokking operations in advance.
+The invariance measure is identically~1 across all conditions; trajectory--curvature alignment is noisy and overlapping; and defect magnitude only separates grokking from non-grokking operations retrospectively.
+Moreover, the same grokking operations trained \emph{without} weight decay exhibit comparable defect acceleration without generalizing, confirming that curvature growth alone is insufficient---regularization pressure is the additional ingredient.
+A complete dynamical-systems theory of grokking would need to formalize the interaction between curvature accumulation and the regularization-induced drift toward the generalizing basin.
+
 \subsection{Implicit Regularization and Low-Dimensional Structure}
 \label{sec:disc_regularization}
 
@@ -715,7 +737,10 @@ Deriving analytical models that capture defect accumulation, manifold formation,
 Taken together, our results suggest that grokking reflects a geometric reorganization of the optimization landscape, governed by curvature, damping, and emergent low-dimensional structure.
 By integrating dynamical, geometric, and causal analyses, this work provides a foundation for understanding delayed generalization as a phase transition in learning dynamics.
 
-The commutator defect, in particular, offers a practical early warning signal: monitoring it during training can detect the approaching phase transition hundreds to tens of thousands of steps in advance (depending on the learning rate), suggesting substantial computational savings in settings where evaluation is expensive.
+The commutator defect serves as a diagnostic for ongoing loss-landscape reorganization: monitoring it during training can detect geometric changes hundreds to tens of thousands of steps before they manifest in accuracy metrics.
+However, defect growth alone does not discriminate which runs will ultimately generalize---non-grokking operations and unregularized training both exhibit curvature growth without generalization.
+The diagnostic value lies in detecting \emph{that} the landscape is reorganizing, not in predicting \emph{whether} grokking will occur.
+Developing composite diagnostics that combine curvature dynamics with regularization-sensitive signals remains an open direction.
 
 We hope that this perspective will inform future studies of optimization, scaling, robustness, and interpretability in neural networks.
 
