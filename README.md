@@ -1,8 +1,8 @@
-# Emergent Low-Dimensional Invariant Submanifolds in Grokking Dynamics
+# Low-Dimensional and Transversely Curved Optimization Dynamics in Grokking
 
 We identify an emergent low-dimensional **invariant submanifold**---the *execution manifold*---in the weight space of transformers trained on modular arithmetic. Loss-landscape curvature is confined to the **normal bundle** of this submanifold, curvature growth in the normal bundle consistently **precedes generalization**, and **causal interventions** confirm orthogonal gradient flow is necessary for grokking.
 
-**Paper**: [`paper/integrability_grokking.tex`](paper/integrability_grokking.tex) &nbsp;|&nbsp; **arXiv**: [2602.10496](https://arxiv.org/abs/2602.10496) (earlier version)
+**Paper**: [`paper/integrability_grokking.tex`](paper/integrability_grokking.tex) &nbsp;|&nbsp; **arXiv**: [2602.16746](https://arxiv.org/abs/2602.16746)
 
 ## Key Findings
 
@@ -217,10 +217,12 @@ Experiments were run on Apple M-series (MPS backend). GPU (CUDA) and CPU are als
 ## Citation
 
 ```bibtex
-@article{xu2026invariant,
-  title={Emergent Low-Dimensional Invariant Submanifolds in Grokking Dynamics},
+@article{xu2026lowdim,
+  title={Low-Dimensional and Transversely Curved Optimization Dynamics in Grokking},
   author={Xu, Yongzhong},
   year={2026},
-  url={https://github.com/skydancerosel/grokking-integrability}
+  eprint={2602.16746},
+  archivePrefix={arXiv},
+  url={https://arxiv.org/abs/2602.16746}
 }
 ```
