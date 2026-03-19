@@ -1,6 +1,6 @@
 # Low-Dimensional and Transversely Curved Optimization Dynamics in Grokking
 
-We identify an emergent low-dimensional **invariant submanifold**---the *execution manifold*---in the weight space of transformers trained on modular arithmetic. Loss-landscape curvature is confined to the **normal bundle** of this submanifold, curvature growth in the normal bundle consistently **precedes generalization**, and **causal interventions** confirm orthogonal gradient flow is necessary for grokking.
+We identify an emergent low-dimensional **invariant submanifold**---the *execution manifold*---in the weight space of transformers trained on modular arithmetic. Loss-landscape curvature is confined to the **normal bundle** of this submanifold, curvature growth in the normal bundle consistently **precedes generalization**, and **causal interventions** confirm orthogonal gradient flow is necessary for grokking. **Spectral edge analysis** reveals a characteristic mode-competition-and-collapse cycle in the weight SVD that correlates with grokking across all conditions.
 
 **Paper**: [Low-Dimensional and Transversely Curved Optimization Dynamics in Grokking](https://arxiv.org/abs/2602.16746)
 
@@ -17,6 +17,12 @@ We identify an emergent low-dimensional **invariant submanifold**---the *executi
 5. **Regime-invariant.** All results replicate across a 100x learning rate sweep ({1e-4, 1e-3, 1e-2}), a qualitatively different slow regime (lr=5e-5, wd=0.1, 3 layers, ~200x timescale difference), and three random seeds.
 
 6. **Causal interventions.** Suppressing orthogonal gradient flow prevents grokking with a monotonic dose-response across four operations (necessary), while artificially boosting curvature defects has no effect (not sufficient). This establishes a directional causal relationship between execution-manifold geometry and generalization.
+
+7. **Spectral edge: mode competition and collapse.** Weight matrix SVD reveals a characteristic spectral cycle during grokking: the dominant singular value gap (sigma_1 - sigma_2) narrows as modes compete, reaches a minimum concurrent with the matrix commutator ||[W_Q, W_K]||_F peak, then widens as one mode dominates and the commutator collapses. Non-grokking controls lack this cycle entirely.
+
+8. **Phase portrait geometry.** In (spectral gap, commutator) phase space, grokking traces a characteristic loop through three phases: competition (near-degenerate modes, low non-commutativity), instability (mode separation, peak non-commutativity), and alignment (post-collapse, generalization). Memorizing models remain trapped in the competition region.
+
+9. **Basis-independent integrability.** The commutator's alignment with weight structure is structural, not algorithmic: three independent bases (weight SVD, displacement SVD, gradient SVD) all show a sign flip from exec/random > 1 during memorization to < 1 post-grokking. This holds per-block across all attention weight matrices (W_Q, W_K, W_V, W_O).
 
 ## Experimental Setup
 
