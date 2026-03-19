@@ -78,6 +78,19 @@ All experiments use the canonical grokking setup from [Power et al. (2022)](http
 | 14 | `grok_intervention_sustained_kick.py` | Sustained directional kicks (boosting curvature defect) | figI8, figI9 |
 | 15 | `grok_intervention_multiop.py` | Multi-operation dose-response replication | figI10, figI11 |
 
+### Spectral Edge Verification
+
+| # | Script | What it does | Figures |
+|---|--------|-------------|---------|
+| 16 | `grok_weight_svd_gaps.py` | Weight matrix SVD spectral gaps (σ₁-σ₂, σ₂-σ₃) over training | figSVD1--figSVD6 |
+| 17 | `grok_eigenvalue_gaps.py` | Representation eigenvalue gaps from QK weight update PCA | figEG1--figEG5 |
+| 18 | `grok_phase_portrait.py` | Phase portraits: spectral gap vs commutator defect | figPP1--figPP4 |
+| 19 | `grok_geometry_conjecture_test.py` | Tests spectral/geometric conjectures across operations and seeds | conjecture_*.png |
+| 20 | `layerwise_phase_portrait.py` | Per-layer and per-head spectral cascade analysis | layerwise_phase_portraits/ |
+| 21 | `grok_local_integrability.py` | Local integrability: windowed projection residuals | figL1--figL5 |
+| 22 | `grok_multibasis_controls.py` | Multi-basis control experiments (PCA, Fourier, random) | figM1--figM5 |
+| 23 | `commutator_heatmap.py` | Per-head and per-layer commutator heatmaps | commutator_heatmaps/ |
+
 ### Supporting Scripts
 
 | Script | Purpose |
@@ -209,6 +222,25 @@ All figures are saved to `pca_sweep_plots/`.
 - **figI9** `figI9_sustained_kick_overlay.png` -- Kick overlay: accuracy + defect
 - **figI10** `figI10_multiop_dose_response.png` -- Multi-operation dose-response (4 ops x 5 strengths)
 - **figI11** `figI11_multiop_combined.png` -- Combined multi-operation results
+
+### Spectral Edge Verification
+- **figSVD1** `figSVD1_master_timeseries.png` -- Weight SVD spectral gaps over training (all ops)
+- **figSVD2** `figSVD2_scatter_gaps_vs_comm.png` -- Spectral gap vs commutator defect scatter
+- **figSVD3** `figSVD3_phase_scatter.png` -- Phase scatter: grok vs non-grok spectral signatures
+- **figSVD4** `figSVD4_perhead.png` -- Per-head SVD gap decomposition
+- **figSVD5** `figSVD5_narrative_test.png` -- Narrative test: spectral gap predicts grokking
+- **figSVD6** `figSVD6_grok_vs_control.png` -- Grok vs control spectral comparison
+- **figEG1** `figEG1_eiggap_vs_commutators_timeseries.png` -- Eigenvalue gaps vs commutators over time
+- **figEG2** `figEG2_eiggap_vs_commutators_scatter.png` -- Eigenvalue gap vs commutator scatter
+- **figEG3** `figEG3_eiggap_multiseed_summary.png` -- Multi-seed eigenvalue gap summary
+- **figEG4** `figEG4_eiggap_phase_correlation.png` -- Eigenvalue gap phase correlation
+- **figEG5** `figEG5_eiggap_layer_comparison.png` -- Layer-wise eigenvalue gap comparison
+- **figPP1** `figPP1_hero_phase_portrait.png` -- Hero phase portrait: spectral gap vs defect
+- **figPP2** `figPP2_grid_phase_portrait.png` -- Grid of phase portraits across operations
+- **figPP3** `figPP3_grok_vs_control_portrait.png` -- Grok vs control phase portrait
+- **figPP4** `figPP4_3d_phase_portrait.png` -- 3D phase portrait
+- **figL1--L5** Local integrability per-block, aggregate, basis rank, multi-op, and hero figures
+- **figM1--M5** Multi-basis ratios, phase bars, per-block heatmap, timeseries, and all-ops comparison
 
 ## Hardware
 
