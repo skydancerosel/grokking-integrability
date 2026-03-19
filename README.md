@@ -58,101 +58,111 @@ All experiments use the canonical grokking setup from [Power et al. (2022)](http
 
 ## Repository Structure
 
-### Core Scripts (run in order)
-
-| # | Script | What it does | Figures |
-|---|--------|-------------|---------|
-| 1 | `grok_sweep.py` | Train models across 6 ops x 2 wd x 3 seeds, logging attention weights | -- |
-| 2 | `pca_sweep_analysis.py` | PCA eigenanalysis on saved attention weight trajectories | figA--figG |
-| 3 | `pca_controls.py` | No-wd baseline, Fourier alignment, random-walk null model | (part of figA, figE) |
-| 4 | `pca_compare_regimes.py` | Compare slow vs fast hyperparameter regimes | figH, figI |
-| 5 | `grok_commutator_analysis.py` | Forward commutator: project defect onto PCA manifold | figJ--figN |
-| 6 | `grok_converse_commutator.py` | Converse: project weight trajectory onto commutator subspace | figO--figR |
-| 7 | `grok_multiseed_commutator.py` | Multi-seed replication (3 seeds x 6 ops x 2 wd = 36 runs) | figS--figV |
-| 8 | `grok_generalization_dynamics.py` | Temporal: defect onset vs generalization transition timing | figW, figW2, figX |
-| 9 | `grok_slow_regime_commutator.py` | Slow regime (lr=5e-5, wd=0.1, 3L): invariance + defect timing | figY, figZ |
-| 10 | `grok_lr_sweep.py` | LR sweep phase diagram across {1e-4, 1e-3, 1e-2} | figPD, figPD2 |
-| 11 | `grok_lr_alignment.py` | Trajectory-curvature alignment across LRs + phase portrait | figPD3, figPD4 |
-| 12 | `grok_intervention.py` | Causal interventions: gradient suppression (5 conditions) | figI1--figI5 |
-| 13 | `grok_intervention_ablation.py` | PCA vs random projection ablation control | figI6, figI7 |
-| 14 | `grok_intervention_sustained_kick.py` | Sustained directional kicks (boosting curvature defect) | figI8, figI9 |
-| 15 | `grok_intervention_multiop.py` | Multi-operation dose-response replication | figI10, figI11 |
-
-### Spectral Edge Verification
-
-| # | Script | What it does | Figures |
-|---|--------|-------------|---------|
-| 16 | `grok_weight_svd_gaps.py` | Weight matrix SVD spectral gaps (σ₁-σ₂, σ₂-σ₃) over training | figSVD1--figSVD6 |
-| 17 | `grok_eigenvalue_gaps.py` | Representation eigenvalue gaps from QK weight update PCA | figEG1--figEG5 |
-| 18 | `grok_phase_portrait.py` | Phase portraits: spectral gap vs commutator defect | figPP1--figPP4 |
-| 19 | `grok_geometry_conjecture_test.py` | Tests spectral/geometric conjectures across operations and seeds | conjecture_*.png |
-| 20 | `layerwise_phase_portrait.py` | Per-layer and per-head spectral cascade analysis | layerwise_phase_portraits/ |
-| 21 | `grok_local_integrability.py` | Local integrability: windowed projection residuals | figL1--figL5 |
-| 22 | `grok_multibasis_controls.py` | Multi-basis control experiments (PCA, Fourier, random) | figM1--figM5 |
-| 23 | `commutator_heatmap.py` | Per-head and per-layer commutator heatmaps | commutator_heatmaps/ |
-
-### Supporting Scripts
-
-| Script | Purpose |
-|--------|---------|
-| `grok_sweep_slow.py` | Slow-regime training (lr=5e-5, wd=0.1, 3 layers) |
-| `grok_integrability_controls.py` | Random subspace baseline control: exec vs random projection |
-| `pca_diagnostic.py` | Tests whether snapshot count explains PC1% variation |
-
-### Output
-
-- `pca_sweep_plots/` -- All publication figures (figA through figZ, figPD, figI) and saved result tensors
-- `grok_sweep_results/` -- Raw sweep outputs (model checkpoints + attention logs per run)
-- `grok_sweep_results_slow/` -- Slow-regime sweep outputs
-- `paper/` -- LaTeX source, compiled PDF, bibliography
+```
+grokking-integrability/
+├── training/                  # Model training
+│   ├── grok_sweep.py                 # Train 6 ops x 2 wd x 3 seeds
+│   └── grok_sweep_slow.py            # Slow regime (lr=5e-5, wd=0.1, 3L)
+│
+├── pca/                       # PCA eigenanalysis
+│   ├── pca_sweep_analysis.py         # Main PCA analysis (figA--figG)
+│   ├── pca_controls.py               # Null model baselines (figA, figE)
+│   ├── pca_compare_regimes.py        # Slow vs fast comparison (figH, figI)
+│   ├── pca_diagnostic.py             # Snapshot count diagnostics
+│   └── grok_integrability_controls.py # Random subspace control (figC1--figC5)
+│
+├── commutator/                # Commutator defect analysis
+│   ├── grok_commutator_analysis.py   # Forward commutator (figJ--figN)
+│   ├── grok_converse_commutator.py   # Converse projection (figO--figR)
+│   ├── grok_multiseed_commutator.py  # Multi-seed replication (figS--figV)
+│   ├── grok_generalization_dynamics.py # Defect-grokking timing (figW, figW2, figX)
+│   └── grok_slow_regime_commutator.py # Slow regime verification (figY, figZ)
+│
+├── spectral/                  # Spectral edge verification
+│   ├── grok_weight_svd_gaps.py       # Weight SVD gaps (figSVD1--figSVD6)
+│   ├── grok_eigenvalue_gaps.py       # Eigenvalue gaps (figEG1--figEG5)
+│   ├── grok_phase_portrait.py        # Phase portraits (figPP1--figPP4)
+│   ├── grok_geometry_conjecture_test.py # Conjecture tests (conjecture_*.png)
+│   ├── layerwise_phase_portrait.py   # Per-layer cascades
+│   ├── grok_local_integrability.py   # Local integrability (figL1--figL5)
+│   ├── grok_multibasis_controls.py   # Multi-basis controls (figM1--figM5)
+│   └── commutator_heatmap.py         # Per-head heatmaps
+│
+├── intervention/              # Causal interventions
+│   ├── grok_intervention.py          # Gradient suppression (figI1--figI5)
+│   ├── grok_intervention_ablation.py # PCA vs random ablation (figI6, figI7)
+│   ├── grok_intervention_sustained_kick.py # Directional kicks (figI8, figI9)
+│   └── grok_intervention_multiop.py  # Multi-op dose-response (figI10, figI11)
+│
+├── lr_sweep/                  # Learning rate sweep
+│   ├── grok_lr_sweep.py              # LR phase diagram (figPD, figPD2)
+│   ├── grok_lr_alignment.py          # Trajectory-curvature alignment (figPD3, figPD4)
+│   └── grok_pc1_lr_experiment.py     # PC1 vs LR (figPC1)
+│
+├── plots/                     # All output figures and result tensors
+├── commutator_heatmaps/       # Per-head/layer commutator heatmaps
+├── layerwise_phase_portraits/ # Per-layer spectral cascade plots
+├── requirements.txt
+└── README.md
+```
 
 ## Reproducing Results
 
 ```bash
 pip install -r requirements.txt
 
-# Step 1: Train models and log attention weights (~30 min on MPS/GPU)
-python grok_sweep.py
+# Step 1: Train models (~30 min on MPS/GPU)
+python training/grok_sweep.py
 
 # Step 2: PCA eigenanalysis (~2 min)
-python pca_sweep_analysis.py
+python pca/pca_sweep_analysis.py
 
 # Step 3: Control experiments (~5 min)
-python pca_controls.py
+python pca/pca_controls.py
 
 # Step 4 (optional): Regime comparison (~10 min)
-python grok_sweep_slow.py
-python pca_compare_regimes.py
+python training/grok_sweep_slow.py
+python pca/pca_compare_regimes.py
 
 # Step 5: Commutator analysis -- single seed (~20 min)
-python grok_commutator_analysis.py
+python commutator/grok_commutator_analysis.py
 
 # Step 6: Converse commutator analysis (~15 min)
-python grok_converse_commutator.py
+python commutator/grok_converse_commutator.py
 
 # Step 7: Multi-seed replication (~90 min)
-python grok_multiseed_commutator.py
+python commutator/grok_multiseed_commutator.py
 
 # Step 8: Generalization dynamics (~15 min)
-python grok_generalization_dynamics.py
+python commutator/grok_generalization_dynamics.py
 
 # Step 9: Slow regime verification (~6 hours)
-python grok_slow_regime_commutator.py
+python commutator/grok_slow_regime_commutator.py
 
 # Step 10: LR sweep phase diagram (~1-1.5 hours on MPS)
-python grok_lr_sweep.py
+python lr_sweep/grok_lr_sweep.py
 
 # Step 11: LR-curvature alignment analysis (~10 min)
-python grok_lr_alignment.py
+python lr_sweep/grok_lr_alignment.py
 
 # Step 12: Causal interventions (~2 hours total)
-python grok_intervention.py
-python grok_intervention_ablation.py
-python grok_intervention_sustained_kick.py
-python grok_intervention_multiop.py
+python intervention/grok_intervention.py
+python intervention/grok_intervention_ablation.py
+python intervention/grok_intervention_sustained_kick.py
+python intervention/grok_intervention_multiop.py
+
+# Step 13: Spectral edge verification (~1 hour)
+python spectral/grok_weight_svd_gaps.py
+python spectral/grok_eigenvalue_gaps.py
+python spectral/grok_phase_portrait.py
+python spectral/grok_geometry_conjecture_test.py
+python spectral/layerwise_phase_portrait.py
+python spectral/grok_local_integrability.py
+python spectral/grok_multibasis_controls.py
+python spectral/commutator_heatmap.py
 ```
 
-All figures are saved to `pca_sweep_plots/`.
+All figures are saved to `plots/`.
 
 ## Figure Index
 
@@ -205,42 +215,23 @@ All figures are saved to `pca_sweep_plots/`.
 - **figZ** `figZ_slow_regime_hero.png` -- Defect predicts grokking in slow regime
 
 ### Learning Rate Sweep
-- **figPD** `figPD_lr_phase_diagram.png` -- Phase diagram: grok fraction, grok step, max defect, lead time across 3 LRs x 6 ops
-- **figPD2** `figPD2_lr_sweep_hero.png` -- Hero: defect + test accuracy for 3 LRs on addition
+- **figPD** `figPD_lr_phase_diagram.png` -- Phase diagram across 3 LRs x 6 ops
+- **figPD2** `figPD2_lr_sweep_hero.png` -- Hero: defect + test accuracy for 3 LRs
 - **figPD3** `figPD3_lr_alignment.png` -- Trajectory-curvature alignment across LRs
-- **figPD4** `figPD4_alignment_vs_defect.png` -- Phase portrait: alignment ratio vs defect magnitude with dynamical regime labels
+- **figPD4** `figPD4_alignment_vs_defect.png` -- Phase portrait with dynamical regime labels
 
 ### Causal Interventions
-- **figI1** `figI1_intervention_defect_trajectories.png` -- Defect trajectories under 5 intervention conditions
-- **figI2** `figI2_intervention_accuracy_overlay.png` -- Test accuracy overlay across conditions
-- **figI3** `figI3_intervention_grok_timing.png` -- Grok timing comparison
-- **figI4** `figI4_intervention_summary_table.png` -- Summary table of all conditions
-- **figI5** `figI5_intervention_hparam_sensitivity.png` -- Hyperparameter sensitivity
-- **figI6** `figI6_ablation_random_vs_pca.png` -- PCA vs random projection ablation: defect + accuracy
-- **figI7** `figI7_ablation_accuracy_overlay.png` -- Ablation accuracy overlay
-- **figI8** `figI8_sustained_kick_dose_response.png` -- Sustained directional kick dose-response
-- **figI9** `figI9_sustained_kick_overlay.png` -- Kick overlay: accuracy + defect
-- **figI10** `figI10_multiop_dose_response.png` -- Multi-operation dose-response (4 ops x 5 strengths)
-- **figI11** `figI11_multiop_combined.png` -- Combined multi-operation results
+- **figI1--I5** Gradient suppression: defect trajectories, accuracy, timing, summary, sensitivity
+- **figI6--I7** PCA vs random projection ablation
+- **figI8--I9** Sustained directional kick dose-response
+- **figI10--I11** Multi-operation dose-response (4 ops x 5 strengths)
 
 ### Spectral Edge Verification
-- **figSVD1** `figSVD1_master_timeseries.png` -- Weight SVD spectral gaps over training (all ops)
-- **figSVD2** `figSVD2_scatter_gaps_vs_comm.png` -- Spectral gap vs commutator defect scatter
-- **figSVD3** `figSVD3_phase_scatter.png` -- Phase scatter: grok vs non-grok spectral signatures
-- **figSVD4** `figSVD4_perhead.png` -- Per-head SVD gap decomposition
-- **figSVD5** `figSVD5_narrative_test.png` -- Narrative test: spectral gap predicts grokking
-- **figSVD6** `figSVD6_grok_vs_control.png` -- Grok vs control spectral comparison
-- **figEG1** `figEG1_eiggap_vs_commutators_timeseries.png` -- Eigenvalue gaps vs commutators over time
-- **figEG2** `figEG2_eiggap_vs_commutators_scatter.png` -- Eigenvalue gap vs commutator scatter
-- **figEG3** `figEG3_eiggap_multiseed_summary.png` -- Multi-seed eigenvalue gap summary
-- **figEG4** `figEG4_eiggap_phase_correlation.png` -- Eigenvalue gap phase correlation
-- **figEG5** `figEG5_eiggap_layer_comparison.png` -- Layer-wise eigenvalue gap comparison
-- **figPP1** `figPP1_hero_phase_portrait.png` -- Hero phase portrait: spectral gap vs defect
-- **figPP2** `figPP2_grid_phase_portrait.png` -- Grid of phase portraits across operations
-- **figPP3** `figPP3_grok_vs_control_portrait.png` -- Grok vs control phase portrait
-- **figPP4** `figPP4_3d_phase_portrait.png` -- 3D phase portrait
-- **figL1--L5** Local integrability per-block, aggregate, basis rank, multi-op, and hero figures
-- **figM1--M5** Multi-basis ratios, phase bars, per-block heatmap, timeseries, and all-ops comparison
+- **figSVD1--SVD6** Weight SVD spectral gaps: timeseries, scatter, phase, per-head, narrative, grok vs control
+- **figEG1--EG5** Eigenvalue gaps: timeseries, scatter, multi-seed, phase correlation, layer comparison
+- **figPP1--PP4** Phase portraits: hero, grid, grok vs control, 3D
+- **figL1--L5** Local integrability: per-block, aggregate, basis rank, multi-op, hero
+- **figM1--M5** Multi-basis: ratios, phase bars, per-block heatmap, timeseries, all-ops
 
 ## Hardware
 

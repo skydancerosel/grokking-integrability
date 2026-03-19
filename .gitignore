@@ -3,8 +3,8 @@
 grok_sweep_results/
 grok_sweep_results_slow/
 
-# Keep result tensors in pca_sweep_plots/ via explicit include below
-!pca_sweep_plots/*.pt
+# Keep result tensors in plots/ via explicit include below
+!plots/*.pt
 
 # Python
 __pycache__/
@@ -34,7 +34,6 @@ bubble_exp\ comm\ copy.py
 attn-1-layer.py
 m_bubble/
 src/
-plots/
 pca_plots/
 marker_test/
 pca_plots.zip
