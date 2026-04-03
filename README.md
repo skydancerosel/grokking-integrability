@@ -85,6 +85,7 @@ grokking-integrability/
 │   └── grok_slow_regime_commutator.py # Slow regime verification (figY, figZ)
 │
 ├── spectral/                  # Spectral edge verification
+│   ├── thesis_table7_replication.py  # Gram matrix spectral analysis (g₂₃, R, k*)
 │   ├── grok_weight_svd_gaps.py       # Weight SVD gaps (figSVD1--figSVD6)
 │   ├── grok_eigenvalue_gaps.py       # Eigenvalue gaps (figEG1--figEG5)
 │   ├── grok_phase_portrait.py        # Phase portraits (figPP1--figPP4)
@@ -157,7 +158,12 @@ python intervention/grok_intervention_ablation.py
 python intervention/grok_intervention_sustained_kick.py
 python intervention/grok_intervention_multiop.py
 
-# Step 13: Spectral edge verification (~1 hour)
+# Step 13: Gram matrix spectral analysis (~5 min for default, ~30 min with large files)
+python spectral/thesis_table7_replication.py
+# To include 1GB files for x2_xy_y2 and x3_xy:
+# MAX_FILE_MB=1200 python spectral/thesis_table7_replication.py
+
+# Step 14: Spectral edge verification (~1 hour)
 python spectral/grok_weight_svd_gaps.py
 python spectral/grok_eigenvalue_gaps.py
 python spectral/grok_phase_portrait.py
@@ -231,6 +237,15 @@ All figures are saved to `plots/`.
 - **figI6--I7** PCA vs random projection ablation
 - **figI8--I9** Sustained directional kick dose-response
 - **figI10--I11** Multi-operation dose-response (4 ops x 5 strengths)
+
+### Gram Matrix Spectral Analysis
+- Replication of the intra-signal gap framework ([Xu 2026, arXiv:2603.28964](https://arxiv.org/abs/2603.28964))
+- Computes three quantities from the rolling-window Gram matrix (W=10) of flattened attention-weight updates:
+  - **g₂₃ = σ₂² − σ₃²**: sub-leading eigenvalue gap — declines 15--111× before grokking in 12/12 runs, 1/12 controls
+  - **R = σ_{k\*}/σ_{k\*+1}**: gap ratio — separates WD=1.0 (1.40±0.07) from WD=0.0 (2.83±0.35)
+  - **k\* (weighted)**: signal rank — stabilizes at k\*=1 in 9/12 grokking runs (75%), matching thesis 10/12 (83%)
+- Script: `spectral/thesis_table7_replication.py`
+- Output: `spectral/coherence_edge_results/thesis_table7_results.pt`, `spectral/coherence_edge_plots/thesis_table7_singletask.png`
 
 ### Spectral Edge Verification
 - **figSVD1--SVD6** Weight SVD spectral gaps: timeseries, scatter, phase, per-head, narrative, grok vs control
