@@ -84,16 +84,28 @@ grokking-integrability/
 │   ├── grok_generalization_dynamics.py # Defect-grokking timing (figW, figW2, figX)
 │   └── grok_slow_regime_commutator.py # Slow regime verification (figY, figZ)
 │
-├── spectral/                  # Spectral edge verification
+├── spectral/                  # Spectral edge & functional mode analysis
+│   │
+│   │  # ── Spectral edge verification ──
 │   ├── thesis_table7_replication.py  # Gram matrix spectral analysis (g₂₃, R, k*)
 │   ├── grok_weight_svd_gaps.py       # Weight SVD gaps (figSVD1--figSVD6)
 │   ├── grok_eigenvalue_gaps.py       # Eigenvalue gaps (figEG1--figEG5)
 │   ├── grok_phase_portrait.py        # Phase portraits (figPP1--figPP4)
-│   ├── grok_geometry_conjecture_test.py # Conjecture tests (conjecture_*.png)
+│   ├── grok_geometry_conjecture_test.py # Conjecture tests
 │   ├── layerwise_phase_portrait.py   # Per-layer cascades
 │   ├── grok_local_integrability.py   # Local integrability (figL1--figL5)
 │   ├── grok_multibasis_controls.py   # Multi-basis controls (figM1--figM5)
-│   └── commutator_heatmap.py         # Per-head heatmaps
+│   ├── commutator_heatmap.py         # Per-head heatmaps
+│   │
+│   │  # ── Functional mode analysis (new) ──
+│   ├── v123_feature_attribution.py   # Head purity null result (purity ≈ 1/8)
+│   ├── residual_stream_alignment.py  # Activation rank (≈40) & Fourier peakedness
+│   ├── sae_fourier_features.py       # SAE Jaccard null result (p ≥ 0.70)
+│   ├── fourier_functional_view.py    # Core Fourier profiles: 4 ops, basis test
+│   ├── fourier_dlog_mul.py           # Discrete-log basis for mul (5.9× improvement)
+│   ├── x2y2_composition_test.py      # Composition cross-terms (4× R² boost)
+│   ├── x2y2_multitask_composition.py # Single-task vs tritask (2.3× reuse)
+│   └── paper_figure_basis.py         # Generates Figure 1
 │
 ├── intervention/              # Causal interventions
 │   ├── grok_intervention.py          # Gradient suppression (figI1--figI5)
@@ -237,6 +249,23 @@ All figures are saved to `plots/`.
 - **figI6--I7** PCA vs random projection ablation
 - **figI8--I9** Sustained directional kick dose-response
 - **figI10--I11** Multi-operation dose-response (4 ops x 5 strengths)
+
+## Functional Mode Analysis
+
+The spectral edge directions {v₁, v₂, v₃} above the bulk spectrum are not localized in parameter space (head purity ≈ 1/8) or activation space (effective rank ≈ 40), and SAE feature overlap is not significant against proper null models (p ≥ 0.70). However, when reinterpreted as functions over the input domain via the perturbation response f_k(a,b) = ||Δh_k(a,b)||², they reveal structured functional modes:
+
+| Task | Correct Basis | Structure | Peak F |
+|------|--------------|-----------|--------|
+| (a+b) mod p | Additive characters | Single mode ω ≈ 25–26 | 0.40 |
+| (a·b) mod p | Discrete-log characters | Single mode ω = 29 (5.9× over additive) | 0.32 |
+| (a-b) mod p | Additive characters | Multi-mode {6, 16, 32} | 0.19 |
+| (a²+b²) mod p | Cross (add × mul) | Compositional (4× R² from cross-terms) | 0.16† |
+
+†Multivariate probe R²; no single-basis F.
+
+Under multitask training (shared trunk for add + mul + x²+y²), the x²+y² spectral edge inherits the addition circuit's frequency ω = 26 (2.3× higher concentration than single-task), providing evidence of functional mode reuse across tasks.
+
+Scripts: `spectral/fourier_functional_view.py`, `spectral/fourier_dlog_mul.py`, `spectral/x2y2_composition_test.py`, `spectral/x2y2_multitask_composition.py`
 
 ### Gram Matrix Spectral Analysis
 - Replication of the intra-signal gap framework ([Xu 2026, arXiv:2603.28964](https://arxiv.org/abs/2603.28964))
