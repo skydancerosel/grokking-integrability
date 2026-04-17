@@ -2,7 +2,9 @@
 
 We identify an emergent low-dimensional **invariant submanifold**---the *execution manifold*---in the weight space of transformers trained on modular arithmetic. Loss-landscape curvature is confined to the **normal bundle** of this submanifold, curvature growth in the normal bundle consistently **precedes generalization**, and **causal interventions** confirm orthogonal gradient flow is necessary for grokking. **Spectral edge analysis** reveals a characteristic mode-competition-and-collapse cycle in the weight SVD that correlates with grokking across all conditions.
 
-**Paper**: [Low-Dimensional and Transversely Curved Optimization Dynamics in Grokking](https://arxiv.org/abs/2602.16746)
+**Papers**:
+- [Low-Dimensional and Transversely Curved Optimization Dynamics in Grokking](https://arxiv.org/abs/2602.16746)
+- [Spectral Edge Dynamics Reveal Functional Modes of Learning](https://arxiv.org/abs/2604.06256) — see [`spectral/functional_modes/`](spectral/functional_modes/)
 
 ## Key Findings
 
@@ -86,7 +88,7 @@ grokking-integrability/
 │
 ├── spectral/                  # Spectral edge & functional mode analysis
 │   │
-│   │  # ── Spectral edge verification ──
+│   │  # ── Spectral edge verification (arXiv:2602.16746, 2603.28964) ──
 │   ├── thesis_table7_replication.py  # Gram matrix spectral analysis (g₂₃, R, k*)
 │   ├── grok_weight_svd_gaps.py       # Weight SVD gaps (figSVD1--figSVD6)
 │   ├── grok_eigenvalue_gaps.py       # Eigenvalue gaps (figEG1--figEG5)
@@ -97,15 +99,17 @@ grokking-integrability/
 │   ├── grok_multibasis_controls.py   # Multi-basis controls (figM1--figM5)
 │   ├── commutator_heatmap.py         # Per-head heatmaps
 │   │
-│   │  # ── Functional mode analysis (new) ──
-│   ├── v123_feature_attribution.py   # Head purity null result (purity ≈ 1/8)
-│   ├── residual_stream_alignment.py  # Activation rank (≈40) & Fourier peakedness
-│   ├── sae_fourier_features.py       # SAE Jaccard null result (p ≥ 0.70)
-│   ├── fourier_functional_view.py    # Core Fourier profiles: 4 ops, basis test
-│   ├── fourier_dlog_mul.py           # Discrete-log basis for mul (5.9× improvement)
-│   ├── x2y2_composition_test.py      # Composition cross-terms (4× R² boost)
-│   ├── x2y2_multitask_composition.py # Single-task vs tritask (2.3× reuse)
-│   └── paper_figure_basis.py         # Generates Figure 1
+│   └── functional_modes/             # arXiv:2604.06256 — Functional Modes of Learning
+│       ├── README.md                     # Paper-specific documentation
+│       ├── paper_figure_basis.py         # Generates Figure 1 (basis dependence)
+│       ├── fig1_basis_dependence.png     # The paper's main figure
+│       ├── fourier_functional_view.py    # Fourier profiles, 4 ops, basis test
+│       ├── fourier_dlog_mul.py           # Discrete-log basis for mul (5.9× improvement)
+│       ├── v123_feature_attribution.py   # Head purity null (purity ≈ 1/8)
+│       ├── residual_stream_alignment.py  # Activation rank (≈40) & Fourier peakedness
+│       ├── sae_fourier_features.py       # SAE Jaccard null result (p ≥ 0.97)
+│       ├── x2y2_composition_test.py      # Composition cross-terms (4× R² boost)
+│       └── x2y2_multitask_composition.py # Single-task vs tritask (2.3× reuse)
 │
 ├── intervention/              # Causal interventions
 │   ├── grok_intervention.py          # Gradient suppression (figI1--figI5)
@@ -250,9 +254,9 @@ All figures are saved to `plots/`.
 - **figI8--I9** Sustained directional kick dose-response
 - **figI10--I11** Multi-operation dose-response (4 ops x 5 strengths)
 
-## Functional Mode Analysis
+## Functional Mode Analysis ([arXiv:2604.06256](https://arxiv.org/abs/2604.06256))
 
-The spectral edge directions {v₁, v₂, v₃} above the bulk spectrum are not localized in parameter space (head purity ≈ 1/8) or activation space (effective rank ≈ 40), and SAE feature overlap is not significant against proper null models (p ≥ 0.70). However, when reinterpreted as functions over the input domain via the perturbation response f_k(a,b) = ||Δh_k(a,b)||², they reveal structured functional modes:
+The spectral edge directions {v₁, v₂, v₃} above the bulk spectrum are not localized in parameter space (head purity ≈ 1/8) or activation space (effective rank ≈ 40), and SAE feature overlap is not significant against proper null models (p ≥ 0.97). However, when reinterpreted as functions over the input domain via the perturbation response f_k(a,b) = ||Δh_k(a,b)||², they reveal structured functional modes:
 
 | Task | Correct Basis | Structure | Peak F |
 |------|--------------|-----------|--------|
@@ -263,9 +267,9 @@ The spectral edge directions {v₁, v₂, v₃} above the bulk spectrum are not 
 
 †Multivariate probe R²; no single-basis F.
 
-Under multitask training (shared trunk for add + mul + x²+y²), the x²+y² spectral edge inherits the addition circuit's frequency ω = 26 (2.3× higher concentration than single-task), providing evidence of functional mode reuse across tasks.
+Under multitask training (shared trunk for add + mul + x²+y²), the x²+y² spectral edge inherits the addition head's characteristic frequency ω = 26 (2.3× higher concentration than single-task), providing evidence of functional mode reuse across tasks.
 
-Scripts: `spectral/fourier_functional_view.py`, `spectral/fourier_dlog_mul.py`, `spectral/x2y2_composition_test.py`, `spectral/x2y2_multitask_composition.py`
+All scripts, the paper figure, and paper-specific documentation are in [`spectral/functional_modes/`](spectral/functional_modes/).
 
 ### Gram Matrix Spectral Analysis
 - Replication of the intra-signal gap framework ([Xu 2026, arXiv:2603.28964](https://arxiv.org/abs/2603.28964))
@@ -297,5 +301,14 @@ Experiments were run on Apple M-series (MPS backend). GPU (CUDA) and CPU are als
   eprint={2602.16746},
   archivePrefix={arXiv},
   url={https://arxiv.org/abs/2602.16746}
+}
+
+@article{xu2026functional_modes,
+  title={Spectral Edge Dynamics Reveal Functional Modes of Learning},
+  author={Xu, Yongzhong},
+  year={2026},
+  eprint={2604.06256},
+  archivePrefix={arXiv},
+  url={https://arxiv.org/abs/2604.06256}
 }
 ```

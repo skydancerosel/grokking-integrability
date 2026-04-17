@@ -31,8 +31,8 @@ import matplotlib.pyplot as plt
 from sklearn.linear_model import Ridge
 
 SCRIPT_DIR  = Path(__file__).parent
-RESULTS_DIR = SCRIPT_DIR / "coherence_edge_results"
-SWEEP_DIR   = SCRIPT_DIR.parent / "grok_sweep_results"
+RESULTS_DIR = SCRIPT_DIR.parent / "coherence_edge_results"
+SWEEP_DIR   = SCRIPT_DIR.parent.parent / "grok_sweep_results"
 PLOT_DIR    = SCRIPT_DIR / "x2y2_composition_plots"
 PLOT_DIR.mkdir(exist_ok=True)
 

@@ -22,9 +22,9 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 SCRIPT_DIR  = Path(__file__).parent
-RESULTS_DIR = SCRIPT_DIR / "coherence_edge_results"
-SWEEP_DIR   = SCRIPT_DIR.parent / "grok_sweep_results"
-PLOT_DIR    = SCRIPT_DIR / "paper_figures"
+RESULTS_DIR = SCRIPT_DIR.parent / "coherence_edge_results"
+SWEEP_DIR   = SCRIPT_DIR.parent.parent / "grok_sweep_results"
+PLOT_DIR    = SCRIPT_DIR
 PLOT_DIR.mkdir(exist_ok=True)
 
 P, D_MODEL, N_HEADS, N_LAYERS, W = 97, 128, 4, 2, 20
