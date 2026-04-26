@@ -1,0 +1,25 @@
+# Byte-compiled
+__pycache__/
+*.pyc
+*.pyo
+
+# macOS
+.DS_Store
+
+# Sweep run logs (large; reproduce via run_sweep.sh / eta_sweep.sh / scaling_sweep.sh)
+runs/
+
+# LaTeX build artifacts
+paper/*.aux
+paper/*.bbl
+paper/*.blg
+paper/*.log
+paper/*.out
+
+# Full paper draft (not yet ready)
+paper/tian_eigengap.tex
+paper/tian_eigengap.pdf
+
+# Punch note (not pushing per current scope)
+paper/note_punch.tex
+paper/note_punch.pdf
