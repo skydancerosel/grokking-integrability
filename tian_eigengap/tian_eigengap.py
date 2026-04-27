@@ -67,25 +67,44 @@ def split_train_test(X, y, n_train: int, seed: int):
 # ------------------------------------------------------------------ model
 
 class TianMLP(nn.Module):
-    """2-layer MLP with identity embedding, sigma(x)=x^2, no biases."""
+    """2-layer MLP with identity embedding, configurable activation, no biases.
 
-    def __init__(self, M: int, num_ops: int, K: int):
+    activation: "sqr" (default, Tian's setting), "relu", "gelu", "silu", "relusqr".
+    Tian's Theorem 6 was proven for sqr. Other activations test whether the
+    spectral signatures generalize beyond the proven regime.
+    """
+
+    def __init__(self, M: int, num_ops: int, K: int, activation: str = "sqr"):
         super().__init__()
         self.M = M
         self.num_ops = num_ops
         self.K = K
+        self.activation = activation
         # frozen identity embedding -> we implement it as a one-hot lookup at forward
         self.W = nn.Linear(num_ops * M, K, bias=False)
         self.V = nn.Linear(K, M, bias=False)
 
     def embed(self, x: torch.Tensor) -> torch.Tensor:
-        # x: [B, num_ops] long -> [B, num_ops*M] float (concatenated one-hots)
-        oh = F.one_hot(x, num_classes=self.M).float()       # [B, num_ops, M]
+        oh = F.one_hot(x, num_classes=self.M).float()
         return oh.view(x.size(0), self.num_ops * self.M)
+
+    def _act(self, z: torch.Tensor) -> torch.Tensor:
+        a = self.activation
+        if a == "sqr":
+            return z.pow(2)
+        if a == "relu":
+            return F.relu(z)
+        if a == "gelu":
+            return F.gelu(z)
+        if a == "silu":
+            return F.silu(z)
+        if a == "relusqr":
+            return F.relu(z).pow(2)
+        raise ValueError(f"Unknown activation: {a}")
 
     def hidden(self, x: torch.Tensor) -> torch.Tensor:
         e = self.embed(x)
-        return (self.W(e)).pow(2)                           # F = sigma(X W)
+        return self._act(self.W(e))                         # F = sigma(X W)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         F_act = self.hidden(x)
@@ -295,7 +314,7 @@ def run(args):
     Y_zm = Y_oh - 1.0 / args.M
 
     # model + opt
-    model = TianMLP(args.M, num_ops=2, K=args.K).to(device)
+    model = TianMLP(args.M, num_ops=2, K=args.K, activation=args.activation).to(device)
     opt = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.eta)
 
     # output dir
@@ -317,8 +336,10 @@ def run(args):
         gapFTF = FtfDeltaTracker(window=args.window, k=5) if do_ftf_delta else None
     prev_W = model.W.weight.detach().clone()
     prev_V = model.V.weight.detach().clone()
-    last_dW = None
+    last_dW = None         # most recent ΔW (set after opt.step at end of prev epoch)
     last_dV = None
+    last_last_dW = None    # the one before that
+    last_last_dV = None
     indep_rng = np.random.default_rng(args.seed)
 
     t0 = time.time()
@@ -347,14 +368,20 @@ def run(args):
             evF = gapFTF.topk() if do_ftf_delta else None
             if evW is not None:
                 row.update({
-                    "W_sigma1": evW[0], "W_sigma2": evW[1] if len(evW) > 1 else float("nan"),
+                    "W_sigma1": evW[0],
+                    "W_sigma2": evW[1] if len(evW) > 1 else float("nan"),
                     "W_sigma3": evW[2] if len(evW) > 2 else float("nan"),
+                    "W_sigma4": evW[3] if len(evW) > 3 else float("nan"),
+                    "W_sigma5": evW[4] if len(evW) > 4 else float("nan"),
                     "W_gap23": (evW[1] / evW[2]) if len(evW) > 2 and evW[2] > 0 else float("nan"),
                 })
             if evV is not None:
                 row.update({
-                    "V_sigma1": evV[0], "V_sigma2": evV[1] if len(evV) > 1 else float("nan"),
+                    "V_sigma1": evV[0],
+                    "V_sigma2": evV[1] if len(evV) > 1 else float("nan"),
                     "V_sigma3": evV[2] if len(evV) > 2 else float("nan"),
+                    "V_sigma4": evV[3] if len(evV) > 3 else float("nan"),
+                    "V_sigma5": evV[4] if len(evV) > 4 else float("nan"),
                     "V_gap23": (evV[1] / evV[2]) if len(evV) > 2 and evV[2] > 0 else float("nan"),
                 })
             if evF is not None:
@@ -365,12 +392,13 @@ def run(args):
                     "FTFd_gap23": (evF[1] / evF[2]) if len(evF) > 2 and evF[2] > 0 else float("nan"),
                 })
 
-        # cosine of consecutive updates (Fig 3 right panel)
-        if last_dW is not None:
-            dW_now = (model.W.weight.detach() - prev_W)
-            dV_now = (model.V.weight.detach() - prev_V)
-            row["W_step_cos_dist"] = cosine_dist(last_dW, dW_now)
-            row["V_step_cos_dist"] = cosine_dist(last_dV, dV_now)
+        # cosine distance between consecutive ΔW (resp. ΔV) optimizer steps.
+        # Fig 3 right panel of Tian (2025). row[t] reports cos-dist between the
+        # ΔW computed at the end of epoch t-1 and the ΔW computed at the end of
+        # epoch t-2, i.e. it measures how the most-recent two deltas align.
+        if last_dW is not None and last_last_dW is not None:
+            row["W_step_cos_dist"] = cosine_dist(last_dW, last_last_dW)
+            row["V_step_cos_dist"] = cosine_dist(last_dV, last_last_dV)
 
         flog.write(json.dumps(row) + "\n")
         flog.flush()
@@ -401,6 +429,9 @@ def run(args):
         if do_eigengap:
             gapW.push(dW)
             gapV.push(dV)
+        # advance the two-step history for the next epoch's cosine logging
+        last_last_dW = last_dW
+        last_last_dV = last_dV
         last_dW = dW.clone()
         last_dV = dV.clone()
 
@@ -434,6 +465,9 @@ def parse():
                    help="compute static F̃^T F̃ top-5 eigvals (slow CPU SVD; default off)")
     p.add_argument("--ftf-delta", action="store_true",
                    help="compute rolling-window eigengap on F̃^T F̃ deltas (slow; default off)")
+    p.add_argument("--activation", type=str, default="sqr",
+                   choices=["sqr", "relu", "gelu", "silu", "relusqr"],
+                   help="hidden activation; Tian's Theorem 6 is proven for sqr")
     p.add_argument("--out", type=str, default="runs")
     p.add_argument("--tag", type=str, default=None)
     args = p.parse_args()
