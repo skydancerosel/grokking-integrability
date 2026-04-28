@@ -1,0 +1,300 @@
+#!/usr/bin/env python3
+"""SED intervention via *gradient* projection (cleaner than update projection).
+
+Instead of intercepting the AdamW update Δθ_t after opt.step(), we modify
+the gradient g_attn = ∇_{θ_attn} L *before* opt.step(). AdamW then computes
+its momentum/adaptive moments on the projected gradient — a consistent
+optimization on a constrained gradient.
+
+Modes:
+  A  — control, natural gradient (no projection)
+  B  — REMOVE SED:           g ← (I - P_S) g
+  C  — KEEP only SED:        g ← P_S g
+  D  — REMOVE random K-dim:  g ← (I - P_R) g  (P_R fresh each step)
+  E  — KEEP only random K-dim: g ← P_R g
+
+S_t is the span of the top-K right singular vectors of the rolling W-window
+of *projected* gradients g_attn applied at the previous W steps.
+
+Adds:
+  --weight-decay <float>   (default 1.0) — for ablation #4 (rank-3-keep
+                            with WD=0 to disentangle AdamW redundancy
+                            from variance reduction)
+"""
+
+import argparse
+import math
+import random
+import time
+from collections import deque
+from dataclasses import dataclass
+from pathlib import Path
+
+import numpy as np
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+
+@dataclass
+class Config:
+    P: int = 97
+    TRAIN_FRACTION: float = 0.5
+    D_MODEL: int = 128
+    N_LAYERS: int = 2
+    N_HEADS: int = 4
+    D_FF: int = 256
+    DROPOUT: float = 0.0
+    LR: float = 1e-3
+    BATCH_SIZE: int = 512
+    STEPS: int = 8000
+    EVAL_EVERY: int = 25
+    CHECKPOINT_EVERY: int = 25
+    GRAD_CLIP: float = 1.0
+    ACC_BS: int = 2048
+    STOP_ACC: float = 0.98
+    STOP_PATIENCE: int = 20
+    ADAM_BETA1: float = 0.9
+    ADAM_BETA2: float = 0.98
+    WEIGHT_DECAY: float = 1.0
+    SEED: int = 42
+
+
+class ModAddTransformer(nn.Module):
+    def __init__(self, cfg):
+        super().__init__()
+        self.cfg = cfg
+        self.tok_emb = nn.Embedding(cfg.P, cfg.D_MODEL)
+        self.pos_emb = nn.Parameter(torch.randn(2, cfg.D_MODEL) / math.sqrt(cfg.D_MODEL))
+        enc = nn.TransformerEncoderLayer(
+            d_model=cfg.D_MODEL, nhead=cfg.N_HEADS, dim_feedforward=cfg.D_FF,
+            dropout=cfg.DROPOUT, activation="gelu", batch_first=True, norm_first=True,
+        )
+        self.encoder = nn.TransformerEncoder(enc, num_layers=cfg.N_LAYERS)
+        self.ln = nn.LayerNorm(cfg.D_MODEL)
+        self.head = nn.Linear(cfg.D_MODEL, cfg.P)
+
+    def forward(self, a, b):
+        x = torch.stack([a, b], dim=1)
+        h = self.tok_emb(x) + self.pos_emb.unsqueeze(0)
+        h = self.encoder(h)
+        return self.head(self.ln(h[:, 0, :]))
+
+
+OPS = {
+    "add": lambda a, b, p: (a + b) % p,
+    "sub": lambda a, b, p: (a - b) % p,
+    "mul": lambda a, b, p: (a * b) % p,
+    "x2_y2": lambda a, b, p: (a * a + b * b) % p,
+}
+NONZERO_OPS = {"mul"}
+
+
+def get_device():
+    if torch.backends.mps.is_available(): return "mps"
+    if torch.cuda.is_available(): return "cuda"
+    return "cpu"
+
+
+def build_dataset(p, frac, seed, op_name):
+    nz = op_name in NONZERO_OPS
+    lo = 1 if nz else 0
+    pairs = [(a, b) for a in range(lo, p) for b in range(lo, p)]
+    rng = random.Random(seed)
+    rng.shuffle(pairs)
+    n = int(frac * len(pairs))
+    return pairs[:n], pairs[n:]
+
+
+def sample_batch(pairs, bs, p, device, op_fn):
+    idx = np.random.randint(0, len(pairs), size=bs)
+    ab = np.array([pairs[i] for i in idx], dtype=np.int64)
+    a = torch.tensor(ab[:, 0], device=device)
+    b = torch.tensor(ab[:, 1], device=device)
+    y = op_fn(a, b, p)
+    return a, b, y
+
+
+@torch.no_grad()
+def eval_acc(model, pairs, cfg, device, op_fn):
+    model.eval()
+    correct = total = 0
+    for i in range(0, len(pairs), cfg.ACC_BS):
+        chunk = pairs[i:i + cfg.ACC_BS]
+        ab = torch.tensor(chunk, device=device)
+        a, b = ab[:, 0], ab[:, 1]
+        y = op_fn(a, b, cfg.P)
+        pred = model(a, b).argmax(-1)
+        correct += (pred == y).sum().item()
+        total += y.numel()
+    return correct / total
+
+
+def is_attn_key(name):
+    return ("self_attn" in name) and ("weight" in name) and ("bias" not in name)
+
+
+def get_attn_params(model):
+    return [(n, p) for n, p in model.named_parameters() if is_attn_key(n)]
+
+
+def gather_grad_flat(attn_params):
+    return torch.cat([p.grad.detach().reshape(-1) for _, p in attn_params])
+
+
+def scatter_grad(attn_params, flat_grad):
+    i = 0
+    for _, p in attn_params:
+        n = p.numel()
+        p.grad.copy_(flat_grad[i:i + n].view_as(p))
+        i += n
+
+
+def sed_basis(buffer, K):
+    X = np.stack(list(buffer), axis=0)
+    _, _, Vt = np.linalg.svd(X, full_matrices=False)
+    return Vt[:K].astype(np.float32)
+
+
+def random_orthonormal(P, K, rng):
+    G = rng.randn(P, K).astype(np.float32)
+    Q, _ = np.linalg.qr(G)
+    return Q.T
+
+
+def project(delta, V, mode):
+    coeff = V @ delta
+    parallel = V.T @ coeff
+    if mode == "remove":
+        return delta - parallel
+    elif mode == "keep":
+        return parallel
+    raise ValueError(mode)
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--mode", choices=["A", "B", "C", "D", "E"], required=True)
+    ap.add_argument("--seed", type=int, default=42)
+    ap.add_argument("--steps", type=int, default=8000)
+    ap.add_argument("--window", type=int, default=20)
+    ap.add_argument("--top-k", type=int, default=3)
+    ap.add_argument("--op", choices=list(OPS.keys()), default="add")
+    ap.add_argument("--weight-decay", type=float, default=1.0,
+                    help="AdamW weight decay (default 1.0; set 0.0 for #4 ablation)")
+    ap.add_argument("--out-dir",
+                    default=str(Path(__file__).parent / "intervention_grad_results"))
+    ap.add_argument("--device", default=None)
+    args = ap.parse_args()
+
+    cfg = Config(SEED=args.seed, STEPS=args.steps, WEIGHT_DECAY=args.weight_decay)
+    device = args.device or get_device()
+    op_fn = OPS[args.op]
+    print(f"[info] mode={args.mode} seed={cfg.SEED} op={args.op} "
+          f"wd={cfg.WEIGHT_DECAY} device={device}")
+
+    torch.manual_seed(cfg.SEED)
+    np.random.seed(cfg.SEED)
+    random.seed(cfg.SEED)
+
+    train_pairs, test_pairs = build_dataset(cfg.P, cfg.TRAIN_FRACTION, cfg.SEED, args.op)
+    print(f"[info] train={len(train_pairs)}, test={len(test_pairs)}")
+
+    model = ModAddTransformer(cfg).to(device)
+    opt = torch.optim.AdamW(
+        model.parameters(),
+        lr=cfg.LR, weight_decay=cfg.WEIGHT_DECAY,
+        betas=(cfg.ADAM_BETA1, cfg.ADAM_BETA2),
+    )
+
+    attn_params = get_attn_params(model)
+    P_attn = sum(p.numel() for _, p in attn_params)
+    print(f"[info] attention param dim P_attn={P_attn}")
+
+    rng_random = np.random.RandomState(cfg.SEED + 1000)
+    buffer = deque(maxlen=args.window)
+
+    checkpoints = [(0, {k: v.cpu().clone() for k, v in model.state_dict().items()})]
+    metrics = []
+    patience = 0
+    grokked = False
+    final_step = cfg.STEPS
+    n_projected = 0
+    t0 = time.time()
+
+    for step in range(1, cfg.STEPS + 1):
+        model.train()
+        a, b, y = sample_batch(train_pairs, cfg.BATCH_SIZE, cfg.P, device, op_fn)
+        loss = F.cross_entropy(model(a, b), y)
+        opt.zero_grad(set_to_none=True)
+        loss.backward()
+        torch.nn.utils.clip_grad_norm_(model.parameters(), cfg.GRAD_CLIP)
+
+        # capture natural attn gradient
+        g_natural = gather_grad_flat(attn_params).cpu().numpy().astype(np.float32)
+
+        # mode-specific projection
+        if args.mode == "A":
+            g_modified = g_natural
+        else:
+            if len(buffer) < args.window:
+                g_modified = g_natural
+            else:
+                if args.mode in ("B", "C"):
+                    V = sed_basis(buffer, args.top_k)
+                else:  # D, E
+                    V = random_orthonormal(P_attn, args.top_k, rng_random)
+                proj_mode = "keep" if args.mode in ("C", "E") else "remove"
+                g_modified = project(g_natural, V, proj_mode)
+                n_projected += 1
+
+        # write modified gradient back so AdamW sees it
+        if args.mode != "A" and not np.array_equal(g_modified, g_natural):
+            scatter_grad(attn_params, torch.from_numpy(g_modified).to(device))
+
+        opt.step()
+        buffer.append(g_modified)
+
+        if step % cfg.CHECKPOINT_EVERY == 0:
+            checkpoints.append(
+                (step, {k: v.cpu().clone() for k, v in model.state_dict().items()})
+            )
+
+        if step % cfg.EVAL_EVERY == 0:
+            tr = eval_acc(model, train_pairs, cfg, device, op_fn)
+            te = eval_acc(model, test_pairs, cfg, device, op_fn)
+            metrics.append({"step": step, "train_acc": tr, "test_acc": te})
+            if step % 1000 == 0:
+                print(f"  step {step:5d} | train {tr:.3f} | test {te:.3f} | "
+                      f"{(time.time()-t0)/60:.1f}m | n_proj={n_projected} | "
+                      f"ckpts {len(checkpoints)}")
+            if te >= cfg.STOP_ACC:
+                patience += 1
+                if patience >= cfg.STOP_PATIENCE:
+                    grokked = True
+                    final_step = step
+                    print(f"  GROKKED at step {step}, test={te:.3f}")
+                    break
+
+    out_dir = Path(args.out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    op_suffix = "" if args.op == "add" else f"_{args.op}"
+    wd_suffix = "" if args.weight_decay == 1.0 else f"_wd{args.weight_decay}"
+    out_path = out_dir / f"intervention_grad_{args.mode}_s{cfg.SEED}{op_suffix}{wd_suffix}.pt"
+    cfg_dict = {k: getattr(cfg, k) for k in cfg.__dataclass_fields__}
+    cfg_dict.update(mode=args.mode, op=args.op, window=args.window, top_k=args.top_k,
+                    grokked=grokked, final_step=final_step, n_projected=n_projected,
+                    intervention_target="gradient")
+    torch.save({
+        "checkpoints": checkpoints,
+        "metrics": metrics,
+        "test_pairs": test_pairs,
+        "cfg": cfg_dict,
+    }, out_path)
+    print(f"[saved] {out_path}  ({len(checkpoints)} ckpts, "
+          f"{(time.time()-t0)/60:.1f}m total, mode={args.mode}, "
+          f"grokked={grokked} at step {final_step}, n_proj={n_projected})")
+
+
+if __name__ == "__main__":
+    main()
