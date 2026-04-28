@@ -1,0 +1,139 @@
+\documentclass[11pt]{article}
+\usepackage[margin=0.85in]{geometry}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{microtype}
+
+\graphicspath{{./}}
+
+\setlength{\parskip}{0.5em}
+\setlength{\parindent}{0pt}
+
+\title{\large\textbf{Optimizer Trajectories Mislead:\\
+       Gradient Decomposition Recovers Feature Directions in Multitask Training}}
+\author{Yongzhong Xu \quad\small\texttt{abbyxu@gmail.com}}
+\date{\small\today}
+
+\begin{document}
+\maketitle
+\vspace{-1.5em}
+
+\noindent\rule{\linewidth}{0.4pt}
+
+\paragraph{Core idea.}
+Most interpretability work that analyzes training dynamics assumes:
+\emph{directions extracted from optimizer trajectories reflect
+feature formation}. This is wrong in a precise and fixable way.
+
+\paragraph{Setup.}
+\begin{itemize}[leftmargin=1.2em,itemsep=0.2em,topsep=0.2em]
+  \item \textbf{Task:} grokking on modular arithmetic
+        ($a{+}b$, $a{-}b$, $a{\cdot}b$, $a^2{+}b^2 \bmod 97$).
+  \item \textbf{Probe:} the Linear Centroids Hypothesis (LCH)
+        of Walker et al.\ \cite{lch_short} --- features as linear
+        directions of input-space centroids
+        $\mu_x = \nabla_x \ell_y(x)$, with sensitivity ratio
+        $R_k(t)$ = centroid response along direction $v_k$ vs.\
+        a random direction.
+  \item \textbf{Compare two objects:}
+    \begin{itemize}[leftmargin=1.2em,itemsep=0pt]
+      \item Update SED: SVD over rolling AdamW updates $\Delta\theta_t$.
+      \item Gradient SED: SVD over rolling gradients
+            $g(t) = \nabla L|_{\theta_t}$.
+    \end{itemize}
+\end{itemize}
+
+\paragraph{Result 1 --- Single-task.}
+\begin{itemize}[leftmargin=1.2em,itemsep=0.2em,topsep=0.2em]
+  \item Update SED: weak coupling, $\bar R_k \in [3, 9]$.
+  \item Gradient SED: strong coupling, $\bar R_k \in [100, 330]$
+        across 4 ops and 3 seeds.
+\end{itemize}
+But a $W$ ablation (window size) reveals: $R_1{=}648$ at $W{=}1$,
+decaying monotonically to $140$ at $W{=}40$. The signal is
+dominated by instantaneous gradient alignment, which is
+near-tautological --- $\nabla_\theta L$ and $\mu_x$ are built from
+the same Jacobians of the network. \emph{Rolling-window SVD acts as
+denoising, not as the source of the coupling.}
+
+\paragraph{Result 2 --- Multitask (the load-bearing finding).}
+A multitask transformer with shared encoder and 4 op-specific heads,
+trained on all four ops jointly:
+\begin{itemize}[leftmargin=1.2em,itemsep=0.2em,topsep=0.2em]
+  \item Update SED \emph{collapses}: $\bar R_k \le 1$ across all 4
+        ops --- worse than random.
+  \item Per-task gradient SED \emph{recovers signal}:
+        $\bar R_k \in [20, 45]$, consistent across all 4 ops.
+\end{itemize}
+
+The aggregated AdamW update mixes (i) momentum, (ii) adaptive
+scaling, (iii) weight decay, and (iv) inter-task gradient
+cancellation, destroying alignment with per-task feature
+directions. The fix: decompose gradients by task, then SVD per
+task. This requires only one extra backward pass per task per
+measurement checkpoint --- cheap relative to training.
+
+\paragraph{Result 3 --- Causal intervention.}
+Constraining the AdamW attention update to a rank-3 subspace,
+3 seeds, addition and multiplication (15+15 = 30 runs):
+\begin{center}\small
+\begin{tabular}{lcc}
+\toprule
+mode (gradient-projected) & speedup over control \\
+\midrule
+remove SED rank-3        & $1.02\times$ \quad (no effect) \\
+keep only SED rank-3     & $\mathbf{2.20\times}$ \\
+remove random rank-3     & $1.00\times$ \quad (no effect) \\
+keep only random rank-3  & $\mathbf{2.36\times}$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+The acceleration is \textbf{rank-specific, not direction-specific}.
+Any rank-3 keep yields $\approx 2.3\times$ speedup; SED-vs-random
+is within seed variation. So the SED basis is \emph{diagnostic} of
+where centroid feature formation is concentrated, but \emph{not
+causally privileged}: the rank constraint does the work.
+
+\paragraph{Takeaways.}
+\begin{enumerate}[leftmargin=1.2em,itemsep=0.2em,topsep=0.2em]
+  \item Optimizer trajectories $\ne$ feature directions.
+  \item Gradient structure is the right object.
+  \item Multitask requires per-task gradient decomposition.
+  \item Low-rank structure matters more than specific directions
+        for whether grokking happens; specific directions matter
+        for measuring \emph{where} it happens.
+\end{enumerate}
+
+\paragraph{One-line punchline.}
+\emph{If you want to understand what a network is learning,
+look at gradients --- not what AdamW did to them.}
+
+\paragraph{Why this matters.}
+\begin{itemize}[leftmargin=1.2em,itemsep=0pt,topsep=0pt]
+  \item Explains apparent failures of trajectory PCA / SVD
+        diagnostics in multitask settings.
+  \item Connects to multitask gradient-interference literature.
+  \item Suggests a candidate diagnostic for monitoring per-task
+        feature formation in instruction-tuning, MoE, and other
+        shared-encoder pipelines, where gradient interference is
+        pervasive --- though we have only verified the claim on a
+        toy modular-arithmetic setting and large-scale validation
+        is open.
+\end{itemize}
+
+\noindent\rule{\linewidth}{0.4pt}
+{\footnotesize Full paper, code, and per-checkpoint data caches:
+\url{https://github.com/skydancerosel/grokking-integrability}}
+
+\begin{thebibliography}{1}
+\bibitem{lch_short}
+Walker, Humayun, Balestriero, Baraniuk. \emph{The Linear Centroids
+Hypothesis: How Deep Network Features Represent Data.}
+arXiv:2604.11962 (2026).
+\end{thebibliography}
+
+\end{document}
