@@ -11,6 +11,7 @@
 \usepackage{titlesec}
 \usepackage{caption}
 \usepackage{subcaption}
+\usepackage{booktabs}
 
 \graphicspath{{figures/}}
 
@@ -22,9 +23,8 @@
 \newcommand{\Ytil}{\widetilde{Y}}
 \newcommand{\sgn}{\operatorname{sgn}}
 
-\title{\vspace{-2.5em}Spectral Marker of Feature Interaction in\\
-Tian's \texttt{Li}$_2$ Grokking Framework\\
-{\large \vspace{0.2em} (Technical summary)}}
+\title{\vspace{-2.5em}Spectral Signatures of Theorem 6 Repulsion in Tian's \texttt{Li}$_2$ Framework\\
+{\large \vspace{0.2em} Technical summary --- activation-specific signatures of an activation-general mechanism}}
 
 \author{Yongzhong Xu\\
 {\small \texttt{abbyxu@gmail.com}}}
@@ -38,143 +38,190 @@ Tian's \texttt{Li}$_2$ Grokking Framework\\
 \section*{1.\quad Problem}
 \vspace{-0.4em}
 
-\citet{tian2025li2} proposes the \texttt{Li}$_2$ framework: grokking in 2-layer
-networks $\widehat Y = \sigma(X W) V$ ($\sigma(x) = x^2$, MSE loss with sample-mean
-projector $P_1^\perp$) passes through three stages---Lazy, Independent, and
-Interactive feature learning---each marked by a different structure of the
-backpropagated gradient
+\citet{tian2025li2} proves a repulsion theorem (Theorem~6) for two-layer
+networks $\widehat Y = \sigma(XW)V$ ($\sigma(x){=}x^2$, MSE loss with sample-mean
+projector $P_1^\perp$) during the interactive feature-learning stage of
+grokking. The asserted off-diagonal sign rule for $B := (\Ftil^\top\Ftil + \eta I)^{-1}$:
 \begin{equation}
-G_F = -\frac{\partial J}{\partial F} = P_1^\perp (Y - F V) V^\top,
-\quad J = \tfrac{1}{2}\norm{P_1^\perp (Y - F V)}_F^2.
-\label{eq:gF}
+\sgn(B_{j\ell}) \;=\; -\sgn\!\left(\widetilde f_j^\top P_{\eta,-j\ell}
+\widetilde f_\ell\right),
+\qquad
+P_{\eta,-j\ell} := I - \Ftil_{-j\ell}(\Ftil_{-j\ell}^\top\Ftil_{-j\ell} +
+\eta I)^{-1}\Ftil_{-j\ell}^\top.
+\label{eq:thm6}
 \end{equation}
-The framework is mathematically clean. \emph{When} transitions between stages
-happen during training is left explicitly uncharacterized.
+Two questions the framework does not answer empirically: (i)~when does
+this become observable in training, and (ii)~does it generalize beyond
+the $\sigma(x){=}x^2$ regime in which it is proven?
 
 % ───────────────────────────────────────────────────────────────────────────
 \section*{2.\quad Result}
 \vspace{-0.4em}
 
-The rolling-window eigengap $\sigma_2/\sigma_3$ of the parameter-update Gram
-$\Delta W$ is a clean Stage~III lock-in detector on Tian's exact modular
-addition setup ($M=71$, $K=2048$, $n=2016$, Adam at $\text{lr}=10^{-3}$,
-weight decay $\eta$). At each epoch we form
-\begin{equation}
-\Delta := [\Delta W_{t-W+1}, \ldots, \Delta W_t] \in \R^{P \times W},
-\qquad
-\sigma_k(t) := \lambda_k\!\left(\Delta^\top \Delta\right),
-\label{eq:sigma}
-\end{equation}
-with $W = 20$ (a $W \times W$ eigenproblem; $P = 2M K \approx 2.9\!\times\!10^5$).
-A slope detector
-\begin{equation}
-s(t) := \tfrac{1}{25}\bigl[\log(\sigma_2/\sigma_3)(t) - \log(\sigma_2/\sigma_3)(t-25)\bigr],
-\quad \text{``fire''} := \min\{ t \ge 100 : s(t) > 0.04\}
-\label{eq:slope}
-\end{equation}
-gives:
+\textbf{The mechanism is activation-general; its spectral signature is
+activation-specific.}
 
-\begin{itemize}[leftmargin=*, itemsep=2pt]
-\item Fires at \textbf{median epoch 174 (IQR $=[173,174]$) in 15/15 grok seeds}
-($\eta = 2\!\times\!10^{-4}$) and \textbf{0/15 control seeds} ($\eta = 0$).
-\item Late-stage magnitude separation: $\sigma_2/\sigma_3 \approx 300$ in grok
-vs $\approx 1.31$ in control over epochs 200--400. Cross-condition ratio
-$229\times$.
-\item Mechanism: between epochs 150 and 200, $\sigma_2$ stabilizes near
-$5\!\times\!10^{-3}$ while $\sigma_3$ collapses two orders of magnitude. The
-rolling spectrum becomes effectively rank-2.
-\end{itemize}
-
-\paragraph{Theorem 6 saturation coincides with the slope-fire moment.}
-\citet{tian2025li2} Theorem~6 asserts that for $B := (\Ftil^\top \Ftil + \eta I)^{-1}$
-on similar feature pairs,
+\paragraph{Theorem 6 verification across activations.} Computing $B$ via
+the Woodbury identity,
 \begin{equation}
-\sgn(B_{j\ell}) = -\sgn\!\left(\widetilde f_j^\top P_{\eta,-j\ell} \widetilde f_\ell\right),
-\qquad P_{\eta,-j\ell} := I - \Ftil_{-j\ell}\!\left(\Ftil_{-j\ell}^\top \Ftil_{-j\ell} + \eta I\right)^{-1}\!\Ftil_{-j\ell}^\top.
-\label{eq:thm6}
+B = \tfrac{1}{\eta} I - \tfrac{1}{\eta^2}\Ftil^\top
+(\Ftil \Ftil^\top + \eta I)^{-1}\Ftil
+\quad\text{($K\times K$ inverse $\to$ $n\times n$, float64 on CPU)},
+\label{eq:woodbury}
 \end{equation}
-Approximating $P_{\eta,-j\ell}$ by the full projector $P_\eta$ (relative error
-$O(2/K)$ at $K = 2048$) and computing $B$ via Woodbury,
-\begin{equation}
-B = \tfrac{1}{\eta} I - \tfrac{1}{\eta^2}\Ftil^\top \!\left(\Ftil \Ftil^\top + \eta I\right)^{-1}\!\Ftil
-\quad \text{(reduces $K\times K$ inverse to $n\times n$)},
-\end{equation}
-the empirical sign-match on the top-200 most-similar feature pairs at five
-deterministic-replay checkpoints is:
-
+on top-200 most-similar feature pairs at five deterministic-replay
+checkpoints, multi-seed sign-match progression on Tian's exact setup
+($M=71$, $K=2048$, $n=2016$, $\eta=2\!\times\!10^{-4}$):
 \begin{center}\small
-\begin{tabular}{rccccc}
+\begin{tabular}{rcccccc}
 \toprule
-epoch & 50 & 100 & \textbf{175} (lock-in) & 250 & 300 \\
+epoch & 50 & 100 & \textbf{175 (lock-in)} & 250 & 300 & range \\
 \midrule
-sign-match & 0.83 & 0.91 & \textbf{0.975} & 0.975 & \textbf{0.995} \\
+$\sigma=x^2$ ($n=5$ seeds) & 0.865 & 0.895 & \textbf{0.955} & 0.970 & \textbf{0.985} & IQR $\le 0.015$ \\
+$\sigma=\mathrm{ReLU}$ (seed 0) & --- & 0.91 & --- & --- & 0.995 (ep 300), 1.000 (ep 500) & --- \\
 \bottomrule
 \end{tabular}
 \end{center}
 
-The sign-rule saturates ($\ge 0.95$) precisely at epoch~175---the same epoch
-the $\sigma_2/\sigma_3$ slope detector fires.
+The $P_{\eta,-j\ell} \approx P_\eta$ approximation preserves the sign
+rule on directly-checked pairs (10/10 sign agreement at epoch~175
+seed~0); the magnitude of the residual differs because the full
+projector $P_\eta$ nearly annihilates $\widetilde f_\ell$ while
+$P_{\eta,-j\ell}$ does not, but for the sign rule of
+equation~\eqref{eq:thm6} the approximation is sufficient.
 
-% ───────────────────────────────────────────────────────────────────────────
-\section*{3.\quad Interpretation}
-\vspace{-0.4em}
-
-In Stage III, similar features repel through the negative off-diagonal
-entries of $B$. The rolling $\Delta W$ spectrum becomes rank-2 because
-two persistent feature directions consolidate while the redundant ones are
-pushed out. $\sigma_2/\sigma_3$ is therefore not just \emph{a} late-stage
-signature---\textbf{it is a direct observable of Tian's repulsion mechanism
-becoming dominant}, with the empirical sign-match providing
-the mechanistic verification.
-
-% ───────────────────────────────────────────────────────────────────────────
-\section*{4.\quad Negative result}
-\vspace{-0.4em}
-
-A simpler signal---the level metric on the activation Gram,
+\paragraph{Parameter-update spectral signature.} At each epoch we form
+the rolling-window Gram of $\Delta W$ ($W=20$, $P=2MK$):
 \begin{equation}
-\rho_{\mathrm{tian}}(t) := \frac{\norm{P_1^\perp F F^\top - (a I + b\,\mathbf{1}\mathbf{1}^\top)}_F}{\norm{F F^\top}_F},
-\label{eq:rho}
+\Delta := [\Delta W_{t-W+1}, \ldots, \Delta W_t] \in \R^{P \times W},
+\quad
+\sigma_k(t) := \lambda_k(\Delta^\top \Delta).
+\label{eq:gram}
 \end{equation}
-where $a, b$ are empirical diagonal/off-diagonal averages---fires
-$\sim 80$ epochs before test accuracy at the $(M=71, \eta=2\!\times\!10^{-4})$
-point. An \textbf{$\eta$ sweep} ($\eta \in \{10^{-5}, 5\!\times\!10^{-5},
-10^{-4}, 2\!\times\!10^{-4}, 5\!\times\!10^{-4}\}$, five seeds each, 600
-epochs) preserves this picture: lead is positive in 20/20 grokking runs
-(range 79--154 epochs); $\eta = 10^{-5}$ does not grok and
-$\rho_{\mathrm{tian}}$ barely touches the 0.075 threshold.
+A slope-based detector,
+\begin{equation}
+s(t) := \tfrac{1}{25}\bigl[\log(\sigma_2/\sigma_3)(t) -
+\log(\sigma_2/\sigma_3)(t-25)\bigr],
+\quad \text{``fire''} := \min\{t \ge 100 : s(t) > 0.04\},
+\label{eq:slope}
+\end{equation}
+gives, on $\sigma=x^2$ at the headline operating point ($\eta=2\!\times\!10^{-4}$
+vs $\eta=0$, 15 seeds each):
+
+\begin{itemize}[leftmargin=*, itemsep=2pt]
+\item \textbf{15/15 grok seeds fire at epoch 174 (IQR $[173, 174]$);
+0/15 control seeds.} Late-stage magnitude separation $229\times$
+($\sigma_2/\sigma_3 \approx 300$ grok vs $\approx 1.31$ control over
+epochs 200--400). The slope-fire epoch coincides with Theorem 6
+saturation ($\ge 0.95$).
+\item Mechanism: between epochs 150 and 200, $\sigma_2$ stabilizes near
+$5\!\times\!10^{-3}$ while $\sigma_3$ collapses two orders of magnitude.
+The rolling spectrum becomes effectively rank-2.
+\end{itemize}
+
+On $\sigma=\mathrm{ReLU}$ (15 seeds, 800 epochs, otherwise identical):
+
+\begin{itemize}[leftmargin=*, itemsep=2pt]
+\item \textbf{0/15 grok seeds fire.} Late-stage magnitude separation
+collapses to $1.4\times$. The spectrum is rank-1 dominated:
+$\sigma_1 \gg \sigma_2 \approx \sigma_3 \approx \sigma_4 \approx \sigma_5$.
+\end{itemize}
+
+% ───────────────────────────────────────────────────────────────────────────
+\section*{3.\quad Interpretation: structure vs mechanism}
+\vspace{-0.4em}
+
+Tian's Theorem 6 governs the off-diagonal sign structure of $B$ via
+properties of $\Ftil^\top\Ftil$ alone, which depends on the activation
+only through its effect on $\Ftil$. The rolling-$\Delta W$ spectral
+signature of Theorem 6's saturation depends on \emph{how} the repulsion
+translates into weight updates, which depends on $\sigma'$:
+\begin{itemize}[leftmargin=*, itemsep=2pt]
+\item Power activations ($\sigma(x){=}x^2$) produce \emph{focused
+memorization} (\citealp{tian2025li2} Theorem 5): features collapse onto
+sharp peaks. Theorem 6 repulsion consolidates redundant features onto
+two persistent rank-2 directions in $\Delta W$; we observe this directly.
+\item ReLU/sigmoid activations produce \emph{spreading memorization}:
+features remain distributed. Theorem 6 still operates (sign rule still
+holds), but there are no sharp peaks for repulsion to consolidate around;
+$\Delta W$ remains rank-1 dominated.
+\end{itemize}
+
+The two findings together identify which parts of the \texttt{Li}$_2$
+framework are activation-general (Theorem 6's sign rule itself) versus
+activation-specific (the rolling-$\Delta W$ rank-2 signature).
+
+% ───────────────────────────────────────────────────────────────────────────
+\section*{4.\quad Methodological controls}
+\vspace{-0.4em}
+
+\paragraph{Window-size sensitivity ($n=3$ seeds, $\sigma=x^2$):}
+\begin{center}\small
+\begin{tabular}{rcccc}
+\toprule
+$W$ & grok fire (3 seeds) & ctrl fire (3 seeds) & late $\sigma_2/\sigma_3$ grok & late $\sigma_2/\sigma_3$ ctrl \\
+\midrule
+5  & [144, 149, 153] & \textbf{[179, 193, 263] (3/3 fire)} & 408 & 8.0 \\
+10 & [---, ---, 347] (1/3) & \textbf{[263, 266, 278] (3/3)} & 64  & 2.3 \\
+\textbf{20} & [173, 173, 174] & [---, ---, ---] (0/3) & 285 & 1.3 \\
+30 & [180, 180, 180] & [---, ---, ---] (0/3) & 140 & 1.2 \\
+\bottomrule
+\end{tabular}
+\end{center}
+$W \in \{20, 30\}$ give perfect specificity; $W \le 10$ produce false
+positives in control. The transition is $\sim 25$ epochs wide, so the
+window must average over this without smearing into Stage~I/II.
+
+\paragraph{Rank confirmation via $\sigma_4, \sigma_5$:} At $W \le 10$,
+$\sigma_3, \sigma_4, \sigma_5$ collapse together to $\sim 10^{-5}$
+(exact rank-2). At $W=30$, geometric cascade $\sigma_3 \approx 10^{-4}$,
+$\sigma_4 \approx 10^{-5}$, $\sigma_5 \approx 10^{-6}$ (rank $\lesssim 3$).
+The "rank-2" framing is exact at the finest temporal resolution.
+
+% ───────────────────────────────────────────────────────────────────────────
+\section*{5.\quad Extension across $\eta$ and the level-metric initiation detector}
+\vspace{-0.4em}
+
+\paragraph{$\eta$ sweep ($n=25$ runs, $\sigma=x^2$).} An extended single-seed
+run at $\eta=10^{-5}$ to 2000 epochs confirms Tian's $1/\eta$ scaling:
+grokking at epoch~1527, with the level metric
+\begin{equation}
+\rho_{\mathrm{tian}}(t) := \frac{\norm{P_1^\perp F F^\top -
+(a(t) I + b(t)\,\mathbf{1}\mathbf{1}^\top)}_F}{\norm{F F^\top}_F}
+\label{eq:rho-tian}
+\end{equation}
+crossing 0.075 at epoch~527 (lead 567 epochs vs $t_{\text{test}=0.5}$).
+At larger $\eta$ the lead is positive in 20/20 grokking runs (range
+79--154 epochs).
+
+The lock-in magnitude is $\eta$-dependent: at $\eta=10^{-5}$ peak
+$\sigma_2/\sigma_3 \approx 25$ vs $\approx 300$ at $\eta=2\!\times\!10^{-4}$.
+The rank-2 structure is incompletely developed when measurement ends in
+the slow regime, but its existence is preserved.
 
 \begin{figure}[h]
 \centering
 \includegraphics[width=0.95\linewidth]{eta_sweep_scatter.png}
-\caption{$\eta$ sweep ($n=25$). Fft fire epoch versus $t_{\text{test}=0.5}$
-(left) and lead time versus $t_{\text{test}=0.5}$ (right), colored by
-$\log_{10}\eta$. Lead is positive in 20/20 grokking runs.
-Linear regression: $t_{\text{fft}} = 0.80\, t_{\text{test}} - 75$
-($R^2 = 0.87$).}
+\caption{$\eta$ sweep ($n=25$, $\sigma=x^2$): $\rho_{\mathrm{tian}}$
+fire epoch versus $t_{\text{test}=0.5}$. Lead positive in 20/20
+grokking runs; lead time scales with grokking timescale. Linear
+regression $t_{\rho} = 0.80\, t_{\text{test}} - 75$ ($R^2 = 0.87$).}
 \label{fig:eta-sweep}
 \end{figure}
 
-\textbf{This survives an $\eta$-sweep but \emph{not} an $M\times p$ scaling
-sweep.} On a 60-run sweep ($M \in \{41, 71, 127\}$, $p \in \{0.1, 0.2, 0.3,
-0.5\}$, five seeds, $\eta = 2\!\times\!10^{-4}$),
-$\rho_{\mathrm{tian}} \ge 0.075$ fires in \textbf{60/60 runs} at near-constant
-epoch ($\sim 11$--$25$), including all cells that fail to grok within the
-training budget. Across this sweep, fire epoch is decoupled from grokking
-outcome.
-
-\paragraph{Reconciliation.} The $\eta$ axis is special: $\eta$ controls
-whether feature dynamics happen at all. At $\eta = 0$, the gradient signal
-collapses and $\rho_{\mathrm{tian}}$ never crosses threshold. At any
-$\eta > 0$ large enough to drive feature dynamics, $\rho_{\mathrm{tian}}$
-crosses---at near-constant epoch regardless of whether $(M, p)$ are sufficient
-for those dynamics to converge to a generalizable solution. The honest
-reading: $\rho_{\mathrm{tian}}$ is a Stage~I$\to$II \emph{initiation}
-detector---necessary but not sufficient for grokking. Only the lock-in
-detector $\sigma_2/\sigma_3$ survives the full stress test.
+\paragraph{Tightly-scoped applicability.} $\rho_{\mathrm{tian}}$ is a
+Stage~I$\to$II initiation marker but does NOT survive an $M \times p$
+scaling sweep: on a 60-run sweep ($M \in \{41, 71, 127\}$, $p \in
+\{0.1, 0.2, 0.3, 0.5\}$, 5 seeds), it fires in \textbf{60/60 runs}
+regardless of grokking outcome. Nor does it survive activation change:
+on $\sigma=\mathrm{ReLU}$ it fires at epoch~0 because the ReLU
+initialization is already far from the form $aI + b\mathbf{1}\mathbf{1}^\top$
+(asymmetric activation $\Rightarrow$ non-isotropic random-feature Gram).
+The detector is scoped to activations producing approximately isotropic
+random features at init.
 
 % ───────────────────────────────────────────────────────────────────────────
-\section*{5.\quad Figure}
+\section*{6.\quad Figure}
 \vspace{-0.4em}
 
 \begin{center}
@@ -182,14 +229,17 @@ detector $\sigma_2/\sigma_3$ survives the full stress test.
 \end{center}
 
 \noindent
-\textbf{Blue:} median $\sigma_2/\sigma_3$ on rolling $\Delta W$ Gram across
-15 grok seeds ($\eta = 2\!\times\!10^{-4}$), with IQR shading and the
-slope-fire epoch (174) marked. \textbf{Orange:} median across 15 control
-seeds ($\eta = 0$). \textbf{Red:} Theorem~6 sign-match
-$\Pr[\sgn(B_{j\ell}) = -\sgn(\widetilde f_j^\top P_\eta \widetilde f_\ell)]$
+\textbf{Blue:} median $\sigma_2/\sigma_3$ on rolling $\Delta W$ Gram
+across 15 grok seeds at $\sigma=x^2$, $\eta=2\!\times\!10^{-4}$, with
+IQR shading and the slope-fire epoch (174) marked. \textbf{Orange:}
+median across 15 control seeds. \textbf{Red:} Theorem 6 sign-match
 on top-200 most-similar feature pairs at five deterministic-replay
-checkpoints. The $\sigma_2/\sigma_3$ rise to its post-grokking plateau
-coincides exactly with Theorem~6 sign-match crossing 0.95.
+checkpoints (median across $n=5$ seeds, IQR $\le 0.015$ throughout).
+The $\sigma_2/\sigma_3$ rise to its post-grokking plateau coincides
+exactly with Theorem 6 sign-match crossing 0.95. The same sign rule
+holds on $\sigma=\mathrm{ReLU}$ (sign-match $\to 1.000$ by epoch 500),
+but the rolling-$\Delta W$ rank-2 signature does not (separation
+collapses from $229\times$ to $1.4\times$).
 
 \bibliographystyle{plainnat}
 \bibliography{references}
